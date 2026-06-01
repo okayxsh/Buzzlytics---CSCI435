@@ -1,0 +1,17 @@
+# Buzzlytics Bee Detection Dataset Configuration
+# YOLOv8 format dataset configuration for fine-tuning
+
+# Dataset path (relative to the training script working directory)
+path: ../datasets
+train: images/train
+val: images/val
+
+# Number of classes
+nc: 4
+
+# Class names
+names:
+  0: active_bee
+  1: pollen_bee
+  2: varroa_infected
+  3: dead_bee

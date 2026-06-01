@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8fafc; /* slate-50 */
+    --foreground: #1e293b; /* slate-800 */
+    
+    --primary: #f59e0b; /* amber-500 */
+    --healthy: #10b981; /* emerald-500 */
+    --danger: #f43f5e; /* rose-500 */
+    --warning: #f59e0b; /* amber-500 */
+  }
+
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-sm rounded-none;
+  }
+  
+  .sharp-edge {
+    @apply rounded-none !important;
+  }
+}
+
+/* Base resets for sharp geometry */
+* {
+  @apply rounded-none;
+}

@@ -101,10 +101,10 @@ export default function UploadVideo({ onUploadStart, onUploadComplete, onUploadE
   return (
     <div>
       <div
-        className={`border-2 border-dashed p-12 text-center transition-all cursor-pointer relative sharp-edge ${
-          dragOver ? 'border-amber-500 bg-amber-500/5 scale-[1.01]' : 
-          file ? 'border-emerald-500 bg-emerald-500/5' : 
-          'border-slate-300 bg-slate-50/50 hover:bg-amber-500/5 hover:border-amber-400'
+        className={`relative cursor-pointer rounded-2xl border-2 border-dashed p-12 text-center transition-all ${
+          dragOver ? 'border-honey-400 bg-honey-50 scale-[1.01]' :
+          file ? 'border-forest-300 bg-forest-50' :
+          'border-line-strong bg-sand/40 hover:border-honey-300 hover:bg-honey-50/60'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -119,33 +119,37 @@ export default function UploadVideo({ onUploadStart, onUploadComplete, onUploadE
           className="hidden"
         />
 
-        <div className={`mb-4 flex justify-center ${dragOver || file ? 'text-amber-500' : 'text-slate-400'}`}>
-          <Upload size={48} strokeWidth={1.5} />
-        </div>
-
         {!file ? (
           <>
-            <div className="text-lg font-black uppercase tracking-tight text-slate-800 mb-2">
-              Drag and drop your footage
+            <div className="mb-5 flex justify-center">
+              <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${dragOver ? 'bg-honey-100 text-honey-600' : 'bg-cream text-forest-600 shadow-soft'}`}>
+                <Upload size={28} strokeWidth={1.8} />
+              </div>
             </div>
-            <div className="text-sm font-medium text-slate-500 mb-4 uppercase tracking-[0.1em]">
-              or click to browse systems
+            <div className="font-display text-xl font-semibold text-ink">
+              Drop your hive footage here
             </div>
-            <div className="text-xs text-slate-400 font-mono uppercase">
-              Supported: {ACCEPTED_FORMATS.join(' | ')}
+            <div className="mt-1.5 text-sm text-ink-soft">
+              or <span className="font-semibold text-forest-700">browse your files</span>
+            </div>
+            <div className="mt-4 text-xs font-medium text-ink-faint">
+              Supports {ACCEPTED_FORMATS.join('  ·  ')}
             </div>
           </>
         ) : (
-          <div className="flex items-center gap-4 p-4 bg-white border border-slate-200 sharp-edge shadow-sm" onClick={(e) => e.stopPropagation()}>
-            <FileVideo size={24} className="text-amber-500 shrink-0" />
-            <div className="text-left flex-1 min-w-0">
-              <div className="text-sm font-bold text-slate-800 truncate">{file.name}</div>
-              <div className="text-xs text-slate-500 font-mono mt-1">{formatFileSize(file.size)}</div>
+          <div className="flex items-center gap-4 rounded-xl border border-line bg-cream p-4 text-left shadow-soft" onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-honey-50 text-honey-600">
+              <FileVideo size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-ink">{file.name}</div>
+              <div className="mt-0.5 text-xs text-ink-faint tabular">{formatFileSize(file.size)}</div>
             </div>
             {!isUploading && (
-              <button 
-                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors sharp-edge"
+              <button
+                className="rounded-lg p-2 text-ink-faint transition-colors hover:bg-[#F6E6DF] hover:text-clay"
                 onClick={handleRemoveFile}
+                aria-label="Remove file"
               >
                 <X size={18} />
               </button>
@@ -154,36 +158,30 @@ export default function UploadVideo({ onUploadStart, onUploadComplete, onUploadE
         )}
       </div>
 
-      {/* Upload Progress */}
+      {/* Upload progress */}
       {isUploading && (
         <div className="mt-6">
-          <div className="w-full h-1.5 bg-slate-200 sharp-edge overflow-hidden">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-sand">
             <div
-              className="h-full bg-amber-500 sharp-edge transition-all duration-300 ease-out"
+              className="h-full rounded-full bg-forest-500 transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="text-xs font-mono text-slate-500 mt-2 text-right uppercase">
-            Uploading... {progress}%
+          <div className="mt-2 text-right text-xs font-medium text-ink-soft tabular">
+            Uploading… {progress}%
           </div>
         </div>
       )}
 
-      {/* Upload Button */}
+      {/* Actions */}
       {file && !isUploading && (
-        <div className="mt-6 flex gap-4">
-          <button 
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-amber-500 text-slate-900 font-black uppercase tracking-widest text-sm hover:bg-amber-400 transition-colors sharp-edge"
-            onClick={handleUpload}
-          >
+        <div className="mt-6 flex gap-3">
+          <button className="btn-primary flex-1" onClick={handleUpload}>
             <Upload size={18} />
-            Initialize Upload
+            Start analysis
           </button>
-          <button 
-            className="px-6 py-4 bg-slate-100 text-slate-600 font-bold uppercase tracking-widest text-sm border border-slate-200 hover:bg-slate-200 hover:text-slate-900 transition-colors sharp-edge"
-            onClick={handleRemoveFile}
-          >
-            Abort
+          <button className="btn-soft" onClick={handleRemoveFile}>
+            Cancel
           </button>
         </div>
       )}

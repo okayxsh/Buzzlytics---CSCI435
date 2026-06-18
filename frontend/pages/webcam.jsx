@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bug, Video, Radio, Camera, CameraOff, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Camera, CameraOff, AlertCircle, Wifi, WifiOff, Radio } from 'lucide-react';
 import StatsPanel from '../components/StatsPanel';
 import HealthSummary from '../components/HealthSummary';
 import { WS_URL } from '../services/api';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 export default function WebcamPage() {
-  const router = useRouter();
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
@@ -46,7 +45,6 @@ export default function WebcamPage() {
     setConnecting(true);
 
     try {
-      // Access webcam
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, frameRate: { ideal: 15 } },
       });
@@ -57,7 +55,6 @@ export default function WebcamPage() {
         await videoRef.current.play();
       }
 
-      // Connect WebSocket
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
@@ -66,7 +63,6 @@ export default function WebcamPage() {
         setConnecting(false);
         setError(null);
 
-        // Start capturing frames at ~10 FPS
         frameIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN && videoRef.current) {
             const canvas = document.createElement('canvas');
@@ -85,7 +81,6 @@ export default function WebcamPage() {
         try {
           const data = JSON.parse(event.data);
 
-          // If annotated frame is returned, draw it on canvas
           if (data.annotated_frame && canvasRef.current) {
             const img = new Image();
             img.onload = () => {
@@ -94,7 +89,6 @@ export default function WebcamPage() {
               canvasRef.current.height = img.height;
               ctx.drawImage(img, 0, 0);
 
-              // Update FPS counter
               fpsCounterRef.current.count += 1;
               const now = Date.now();
               if (now - fpsCounterRef.current.lastTime >= 1000) {
@@ -106,17 +100,16 @@ export default function WebcamPage() {
             img.src = `data:image/jpeg;base64,${data.annotated_frame}`;
           }
 
-          // If stats data is returned
           if (data.stats) {
             setStatsData(data.stats);
           }
         } catch (e) {
-          // Ignore parse errors for binary frames
+          // ignore parse errors for binary frames
         }
       };
 
       ws.onerror = () => {
-        setError('WebSocket connection error. Make sure the backend is running.');
+        setError('Could not reach the analysis server. Make sure the backend is running.');
         setConnecting(false);
         stopStreaming();
       };
@@ -128,11 +121,11 @@ export default function WebcamPage() {
     } catch (err) {
       setConnecting(false);
       if (err.name === 'NotAllowedError') {
-        setError('Camera access denied. Please allow camera permissions and try again.');
+        setError('Camera access was denied. Allow camera permission and try again.');
       } else if (err.name === 'NotFoundError') {
-        setError('No camera found. Please connect a webcam and try again.');
+        setError('No camera found. Connect a webcam and try again.');
       } else {
-        setError(`Failed to start webcam: ${err.message}`);
+        setError(`Could not start the webcam: ${err.message}`);
       }
     }
   }, [stopStreaming]);
@@ -147,7 +140,6 @@ export default function WebcamPage() {
     }
   }, [connected, startStreaming, stopStreaming]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopStreaming();
@@ -155,130 +147,109 @@ export default function WebcamPage() {
   }, [stopStreaming]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header className="header">
-        <div className="header-logo">
-          <Bug size={28} style={{ color: 'var(--color-healthy)' }} />
-          <h1>Buzzlytics</h1>
-        </div>
-        <nav className="header-nav">
-          <Link href="/" legacyBehavior>
-            <button className={`nav-tab ${router.pathname === '/' ? 'active' : ''}`}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Video size={15} />
-                Video Upload
-              </span>
-            </button>
-          </Link>
-          <Link href="/webcam" legacyBehavior>
-            <button className={`nav-tab ${router.pathname === '/webcam' ? 'active' : ''}`}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Radio size={15} />
-                Live Webcam
-              </span>
-            </button>
-          </Link>
-        </nav>
-      </header>
+    <div className="relative min-h-screen">
+      <Navbar />
 
-      {/* Main Content */}
-      <main className="main-content">
-        <div className="dashboard-section">
-          <div className="dashboard-section-title">Live Webcam Monitoring</div>
+      <div className="mx-auto max-w-[1240px] px-5 pb-24 pt-32 md:px-8">
+        {/* heading */}
+        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="max-w-2xl">
+            <div className="eyebrow">Live feed</div>
+            <h1 className="mt-3 font-display text-4xl font-medium leading-tight text-ink md:text-5xl">
+              Watch the hive <span className="italic text-forest-700">as it happens.</span>
+            </h1>
+            <p className="mt-4 text-lg leading-relaxed text-ink-soft">
+              Point a webcam at the entrance and Buzzlytics annotates every frame in real time,
+              updating the colony’s vital signs as the bees come and go.
+            </p>
+          </div>
 
-          {/* Controls */}
-          <div className="webcam-controls" style={{ marginBottom: 16 }}>
+          <div className="flex items-center gap-4">
             <button
-              className={`btn ${connected ? 'btn-danger' : 'btn-primary'}`}
+              className={connected ? 'btn-soft' : 'btn-primary'}
               onClick={handleToggleConnection}
               disabled={connecting}
             >
               {connecting ? (
-                'Connecting...'
+                'Connecting…'
               ) : connected ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <CameraOff size={16} />
-                  Disconnect
-                </span>
+                <><CameraOff className="h-4 w-4" /> Disconnect</>
               ) : (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Camera size={16} />
-                  Connect Webcam
-                </span>
+                <><Camera className="h-4 w-4" /> Connect webcam</>
               )}
             </button>
-
             {connected && (
-              <span className="webcam-fps">
-                FPS: <span className="webcam-fps-value">{fps}</span>
+              <span className="pill text-forest-700">
+                <Wifi className="h-3.5 w-3.5" />
+                {fps} fps
               </span>
             )}
           </div>
+        </div>
 
-          {/* Error */}
-          {error && (
-            <div className="error-message" style={{ marginBottom: 16 }}>
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-[#E7C5B7] bg-[#F6E6DF] p-5 text-clay">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            <span className="font-medium">{error}</span>
+          </div>
+        )}
 
-          <div className="section-row">
-            {/* Video Area */}
-            <div>
-              <div className="webcam-canvas-wrapper">
-                {/* Hidden video element for capturing webcam */}
-                <video
-                  ref={videoRef}
-                  style={{ display: 'none' }}
-                  muted
-                  playsInline
-                />
-
-                {connected ? (
-                  <canvas ref={canvasRef} />
-                ) : (
-                  <div className="webcam-placeholder">
-                    <Camera size={48} className="webcam-placeholder-icon" />
-                    <div className="webcam-placeholder-title">No Webcam Connected</div>
-                    <div className="webcam-placeholder-sub">
-                      Click "Connect Webcam" to start live monitoring
-                    </div>
-                  </div>
-                )}
-
-                {/* Status Badge */}
-                {connected && (
-                  <div className="webcam-status-badge connected">
-                    <Wifi size={12} />
-                    LIVE
-                  </div>
-                )}
-                {!connected && !connecting && streamRef.current === null && (
-                  <div style={{ position: 'absolute', top: 12, right: 12 }}>
-                    <div className="webcam-status-badge disconnected">
-                      <WifiOff size={12} />
-                      OFFLINE
-                    </div>
-                  </div>
-                )}
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+          {/* live canvas */}
+          <div className="card p-7 md:p-8 lg:col-span-2">
+            <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+              <div className="flex items-center gap-3">
+                <Radio className="h-5 w-5 text-forest-700" />
+                <h2 className="font-display text-xl font-semibold text-ink">Live view</h2>
               </div>
+              {connected ? (
+                <span className="pill text-forest-700">
+                  <span className="h-2 w-2 animate-pulse-soft rounded-full bg-forest-500" /> Live
+                </span>
+              ) : (
+                <span className="pill text-ink-faint">
+                  <WifiOff className="h-3.5 w-3.5" /> Offline
+                </span>
+              )}
             </div>
 
-            {/* Health Summary Sidebar */}
-            <HealthSummary data={statsData} />
+            <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-line bg-[#1b1a16]">
+              <video ref={videoRef} style={{ display: 'none' }} muted playsInline />
+
+              {connected ? (
+                <canvas ref={canvasRef} className="h-full w-full object-contain" />
+              ) : (
+                <div className="px-6 py-20 text-center">
+                  <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 text-honey-300">
+                    <Camera className="h-8 w-8" />
+                  </div>
+                  <div className="font-display text-xl font-semibold text-cream">No camera connected</div>
+                  <p className="mx-auto mt-2 max-w-xs text-sm text-[#cfc6b4]">
+                    Hit “Connect webcam” to start watching the hive in real time.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Stats */}
-          {statsData && (
-            <div style={{ marginTop: 24 }}>
-              <div className="dashboard-section-title">Real-Time Metrics</div>
-              <StatsPanel data={statsData} />
-            </div>
-          )}
+          {/* health sidebar */}
+          <div className="card p-7 md:p-8">
+            <HealthSummary data={statsData} />
+          </div>
         </div>
-      </main>
+
+        {statsData && (
+          <div className="card mt-8 p-7 md:p-8">
+            <div className="mb-7 border-b border-line pb-4">
+              <h2 className="font-display text-xl font-semibold text-ink">Live readings</h2>
+              <p className="text-sm text-ink-faint">Updating as the feed runs</p>
+            </div>
+            <StatsPanel data={statsData} />
+          </div>
+        )}
+      </div>
+
+      <Footer />
     </div>
   );
 }

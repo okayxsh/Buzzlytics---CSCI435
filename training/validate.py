@@ -114,7 +114,7 @@ def main() -> None:
     print(f"  Recall:    {metrics.box.mr:.4f}")
 
     # Per-class metrics
-    class_names = ["active_bee", "pollen_bee", "varroa_infected", "dead_bee"]
+    class_names = ["bee", "pollen_bee", "varroa_bee", "wasp"]
     if hasattr(metrics.box, "maps") and metrics.box.maps is not None:
         print("\n  Per-class mAP50-95:")
         for i, name in enumerate(class_names):

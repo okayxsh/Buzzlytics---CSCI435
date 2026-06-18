@@ -2,7 +2,7 @@
 Buzzlytics Model Training Script
 
 Fine-tunes a YOLOv8 model on a custom bee detection dataset with four classes:
-active_bee, pollen_bee, varroa_infected, and dead_bee.
+bee, pollen_bee, varroa_bee, and wasp.
 
 Usage:
     python train.py --data ../datasets/data/bee_dataset.yaml --epochs 100 --batch 16

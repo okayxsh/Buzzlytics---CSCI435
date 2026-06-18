@@ -1,0 +1,2 @@
+pytest==8.2.0
+roboflow==1.1.28

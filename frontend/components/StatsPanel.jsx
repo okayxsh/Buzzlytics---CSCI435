@@ -4,7 +4,6 @@ import {
   Activity,
   Flower2,
   AlertTriangle,
-  Skull,
   Percent,
   ShieldAlert,
   Heart,
@@ -72,19 +71,19 @@ export default function StatsPanel({ data }) {
       },
     },
     {
-      key: 'dead_bees',
-      label: 'Dead Bees',
-      icon: Skull,
+      key: 'wasps',
+      label: 'Wasps',
+      icon: ShieldAlert,
       format: (v) => Math.round(v).toLocaleString(),
       getColor: (v, d) => {
         const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        return ratio > 10 ? 'critical' : ratio > 5 ? 'warning' : 'healthy';
+        return ratio > 5 ? 'critical' : ratio > 1 ? 'warning' : 'healthy';
       },
       getTrend: (v, d) => {
         const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        if (ratio > 10) return { dir: 'down', text: 'High' };
-        if (ratio > 5) return { dir: 'neutral', text: 'Moderate' };
-        return { dir: 'up', text: 'Low' };
+        if (ratio > 5) return { dir: 'down', text: 'Threat' };
+        if (ratio > 1) return { dir: 'neutral', text: 'Present' };
+        return { dir: 'up', text: 'Clear' };
       },
     },
     {
@@ -173,30 +172,30 @@ export default function StatsPanel({ data }) {
   }, [data]);
 
   const colorStyles = {
-    healthy: { borderTop: 'border-t-emerald-500', iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', barBg: 'bg-emerald-500' },
-    warning: { borderTop: 'border-t-amber-500', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', barBg: 'bg-amber-500' },
-    critical: { borderTop: 'border-t-rose-500', iconBg: 'bg-rose-500/10', iconColor: 'text-rose-500', barBg: 'bg-rose-500' },
-    neutral: { borderTop: 'border-t-slate-400', iconBg: 'bg-slate-200', iconColor: 'text-slate-500', barBg: 'bg-slate-400' },
+    healthy: { top: 'before:bg-forest-500', iconBg: 'bg-forest-50', iconColor: 'text-forest-600', barBg: 'bg-forest-500' },
+    warning: { top: 'before:bg-honey-400', iconBg: 'bg-honey-50', iconColor: 'text-honey-600', barBg: 'bg-honey-400' },
+    critical: { top: 'before:bg-clay', iconBg: 'bg-[#F6E6DF]', iconColor: 'text-clay', barBg: 'bg-clay' },
+    neutral: { top: 'before:bg-line-strong', iconBg: 'bg-sand', iconColor: 'text-ink-soft', barBg: 'bg-forest-500' },
   };
 
   const trendStyles = {
-    up: { bg: 'bg-emerald-500/10', text: 'text-emerald-600', border: 'border-emerald-500/20' },
-    down: { bg: 'bg-rose-500/10', text: 'text-rose-600', border: 'border-rose-500/20' },
-    neutral: { bg: 'bg-slate-200', text: 'text-slate-600', border: 'border-slate-300' },
+    up: { bg: 'bg-forest-50', text: 'text-forest-700', border: 'border-forest-200' },
+    down: { bg: 'bg-[#F6E6DF]', text: 'text-clay', border: 'border-[#E7C5B7]' },
+    neutral: { bg: 'bg-sand', text: 'text-ink-soft', border: 'border-line-strong' },
   };
 
   if (!data) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="bg-slate-50 border border-slate-200 p-6 sharp-edge border-t-2 border-t-slate-200 opacity-50">
-            <div className="flex justify-between items-center mb-4">
-              <div className="w-10 h-10 bg-slate-200 flex items-center justify-center sharp-edge">
-                <Bug size={18} className="text-slate-400" />
+          <div key={i} className="rounded-2xl border border-line bg-cream p-6 opacity-60">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sand">
+                <Bug size={18} className="text-ink-faint" />
               </div>
             </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">--</div>
-            <div className="text-3xl font-black text-slate-300">--</div>
+            <div className="data-label mb-1.5">Awaiting data</div>
+            <div className="font-display text-3xl text-line-strong">—</div>
           </div>
         ))}
       </div>
@@ -204,7 +203,7 @@ export default function StatsPanel({ data }) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {metrics.map(
         ({ key, label, icon: Icon, format, getColor, getTrend, isHealthScore }) => {
           const value = animatedValues[key] ?? 0;
@@ -214,27 +213,28 @@ export default function StatsPanel({ data }) {
           const trStyle = trend ? trendStyles[trend.dir] : null;
 
           return (
-            <div key={key} className={`bg-white border border-slate-200 p-6 sharp-edge border-t-2 ${style.borderTop} hover:-translate-y-1 transition-transform duration-300 shadow-sm hover:shadow-md`}>
-              <div className="flex justify-between items-center mb-6">
-                <div className={`w-10 h-10 flex items-center justify-center sharp-edge ${style.iconBg} ${style.iconColor}`}>
+            <div
+              key={key}
+              className={`group relative overflow-hidden rounded-2xl border border-line bg-cream p-6 shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift before:absolute before:inset-x-0 before:top-0 before:h-1 ${style.top} before:content-['']`}
+            >
+              <div className="mb-5 flex items-center justify-between">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${style.iconBg} ${style.iconColor}`}>
                   <Icon size={20} />
                 </div>
                 {trend && (
-                  <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-wider border sharp-edge ${trStyle.bg} ${trStyle.text} ${trStyle.border}`}>
+                  <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${trStyle.bg} ${trStyle.text} ${trStyle.border}`}>
                     {trend.text}
                   </span>
                 )}
               </div>
-              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
-                {label}
-              </div>
-              <div className="text-3xl font-black text-slate-900 tracking-tight tabular-nums">
+              <div className="data-label mb-1.5">{label}</div>
+              <div className="font-display text-3xl font-semibold tabular text-ink">
                 {format(value)}
               </div>
               {isHealthScore && (
-                <div className="w-full h-1 bg-slate-100 mt-4 sharp-edge overflow-hidden">
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-sand">
                   <div
-                    className={`h-full ${style.barBg} transition-all duration-500 ease-out`}
+                    className={`h-full rounded-full ${style.barBg} transition-all duration-500 ease-out`}
                     style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
                   />
                 </div>

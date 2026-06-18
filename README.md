@@ -24,7 +24,7 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 
 - **Video Upload Processing**: Upload pre-recorded hive videos for batch analysis with annotated output and health reports
 - **Live Webcam Streaming**: Real-time bee monitoring via WebSocket-based frame streaming with instant annotations
-- **4-Class Bee Detection**: Detects active bees, pollen-carrying bees, varroa-infected bees, and dead bees
+- **4-Class Bee Detection**: Detects bees, pollen-carrying bees, varroa-infected bees, and wasps (entrance pest/robbing threat)
 - **Multi-Object Tracking**: ByteTrack-based persistent identity tracking across video frames
 - **Health Score Engine**: Algorithmic hive health scoring (0-100) with clinical status classification
 - **Real-Time Analytics Dashboard**: Live metrics panel with counts, rates, and trend indicators
@@ -78,10 +78,10 @@ The system integrates the following four computer vision capabilities:
 | 4 | **Video Processing** | Full video pipeline with frame-by-frame processing, moving object tracking, and health analytics | `cv_pipeline/pipeline.py` |
 
 **Detection Classes:**
-- `active_bee` (0): Normally flying/crawling bees
+- `bee` (0): Healthy forager bees
 - `pollen_bee` (1): Bees carrying pollen loads
-- `varroa_infected` (2): Bees showing varroa mite infestation signs
-- `dead_bee` (3): Deceased bees at hive entrance
+- `varroa_bee` (2): Bees showing varroa mite infestation signs
+- `wasp` (3): Wasps at hive entrance (signals robbing/predation risk)
 
 ---
 
@@ -270,10 +270,10 @@ class_id x_center y_center width height
 ```
 
 All values are normalized to [0, 1]. Class IDs:
-- `0` = active_bee
+- `0` = bee
 - `1` = pollen_bee
-- `2` = varroa_infected
-- `3` = dead_bee
+- `2` = varroa_bee
+- `3` = wasp
 
 ### Training
 
@@ -343,8 +343,8 @@ Receive (server to client):
     "total_bees": 12,
     "active_bees": 8,
     "pollen_bees": 2,
-    "varroa_infected": 1,
-    "dead_bees": 1,
+    "varroa_bees": 1,
+    "wasps": 1,
     "health_score": 65,
     "health_status": "Warning",
     "activity_rate": 0.67,
@@ -362,7 +362,7 @@ Receive (server to client):
 **Scenario 1 - Video Upload Analysis:**
 I upload a video of my hive entrance recorded during the morning foraging period. The system processes the video and shows me:
 - An annotated video with bounding boxes around each detected bee, color-coded by health status
-- A count of active, pollen-carrying, varroa-infected, and dead bees
+- A count of healthy bees, pollen-carrying bees, varroa-infected bees, and wasps
 - A health score of 75/100 with a "Healthy" classification
 - A recommendation noting good foraging activity based on the pollen-carrying ratio
 

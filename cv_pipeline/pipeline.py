@@ -35,31 +35,49 @@ class CVPipeline:
     video files with progress reporting.
 
     Args:
-        model_path: Path to YOLOv8 weights file. If the file does not
-            exist, the pretrained nano model is used as fallback.
+        model_path: Path to YOLOv8 weights file. If None, taken from
+            config. If the file does not exist, the pretrained nano
+            model is used as fallback.
         conf_threshold: Minimum confidence threshold for detections.
+            If None, taken from config.
         use_tracker: Whether to enable multi-object tracking. When
             disabled, only detection results are used.
+        config: Optional pre-loaded config dict. If None, load_config()
+            is called to read config.yaml (merged over defaults).
     """
 
     def __init__(
         self,
-        model_path: str = "yolov8n.pt",
-        conf_threshold: float = 0.25,
+        model_path: Optional[str] = None,
+        conf_threshold: Optional[float] = None,
         use_tracker: bool = True,
+        config: Optional[Dict] = None,
     ) -> None:
-        self.model_path = model_path
-        self.conf_threshold = conf_threshold
+        from .config import load_config
+
+        cfg = config if config is not None else load_config()
+        det = cfg["detector"]
+
+        self.model_path = model_path if model_path is not None else det["model_path"]
+        self.conf_threshold = (
+            conf_threshold if conf_threshold is not None else det["conf_threshold"]
+        )
         self.use_tracker = use_tracker
 
-        # Initialize sub-modules
+        # Convert color lists from YAML into BGR tuples for OpenCV.
+        color_map = {
+            name: tuple(bgr)
+            for name, bgr in cfg["visualize"]["colors"].items()
+        }
+
         self.detector = BeeDetector(
-            model_path=model_path,
-            conf_threshold=conf_threshold,
+            model_path=self.model_path,
+            conf_threshold=self.conf_threshold,
+            iou_threshold=det["iou_threshold"],
         )
         self.tracker = BeeTracker() if use_tracker else None
-        self.analytics = AnalyticsEngine()
-        self.visualizer = Visualizer()
+        self.analytics = AnalyticsEngine(config=cfg)
+        self.visualizer = Visualizer(color_map=color_map)
 
     def process_frame(
         self,

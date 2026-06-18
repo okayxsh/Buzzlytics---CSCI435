@@ -2,7 +2,7 @@
 YOLOv8-based object detector for the Buzzlytics CV Pipeline.
 
 Detects four bee-related classes in beehive monitoring footage:
-active_bee, pollen_bee, varroa_infected, and dead_bee.
+bee, pollen_bee, varroa_bee, and wasp.
 """
 
 from __future__ import annotations
@@ -20,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Class ID to class name mapping for the bee detection model
 BEE_CLASS_NAMES: Dict[int, str] = {
-    0: "active_bee",
+    0: "bee",
     1: "pollen_bee",
-    2: "varroa_infected",
-    3: "dead_bee",
+    2: "varroa_bee",
+    3: "wasp",
 }
 
 
@@ -48,8 +48,8 @@ class BeeDetector:
     """YOLOv8-based detector for bee-related objects.
 
     Loads a YOLOv8 model and runs inference on video frames to detect
-    four classes of interest in beehive monitoring: active_bee,
-    pollen_bee, varroa_infected, and dead_bee.
+    four classes of interest in beehive monitoring: bee,
+    pollen_bee, varroa_bee, and wasp.
 
     If a custom model file exists at the specified path, it will be
     loaded. Otherwise, the pretrained YOLOv8 nano model is used as a

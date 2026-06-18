@@ -186,8 +186,9 @@ class CVPipeline:
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
+            cap.release()
             raise ValueError(
-                f"Cannot open video file: {video_path}"
+                f"Could not open video (corrupt/unsupported): {video_path}"
             )
 
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

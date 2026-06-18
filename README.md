@@ -341,7 +341,7 @@ Receive (server to client):
   "annotated_frame": "<base64_encoded_jpeg>",
   "stats": {
     "total_bees": 12,
-    "bees": 8,
+    "active_bees": 8,
     "pollen_bees": 2,
     "varroa_bees": 1,
     "wasps": 1,

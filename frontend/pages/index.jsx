@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Flower2, Skull, ShieldAlert, Activity, Radio,
+  Flower2, Bug, ShieldAlert, Activity, Radio,
   Sparkles, ScanSearch, Route, LineChart, ArrowRight,
   Cpu, Camera, HeartPulse, Crosshair, Leaf,
 } from 'lucide-react';
@@ -33,10 +33,10 @@ function Eyebrow({ children }) {
 }
 
 const CLASSES = [
-  { icon: Activity, name: 'Active', tone: 'text-forest-600', chip: 'bg-forest-50 border-forest-200', dot: 'bg-forest-500', desc: 'Healthy foragers crawling and flying at the entrance — the baseline of a thriving colony.' },
+  { icon: Activity, name: 'Bee', tone: 'text-forest-600', chip: 'bg-forest-50 border-forest-200', dot: 'bg-forest-500', desc: 'Healthy forager bees crawling and flying at the entrance — the baseline of a thriving colony.' },
   { icon: Flower2, name: 'Pollen-laden', tone: 'text-honey-600', chip: 'bg-honey-50 border-honey-200', dot: 'bg-honey-400', desc: 'Returning bees carrying pollen loads, a direct read on foraging success.' },
   { icon: ShieldAlert, name: 'Varroa-hit', tone: 'text-amberwarn', chip: 'bg-honey-50 border-honey-200', dot: 'bg-amberwarn', desc: 'Bees showing mite infestation — the single biggest driver of colony collapse.' },
-  { icon: Skull, name: 'Dead', tone: 'text-clay', chip: 'bg-[#F6E6DF] border-[#E7C5B7]', dot: 'bg-clay', desc: 'Deceased bees at the entrance, an early flag for disease or pesticide exposure.' },
+  { icon: Bug, name: 'Wasp', tone: 'text-clay', chip: 'bg-[#F6E6DF] border-[#E7C5B7]', dot: 'bg-clay', desc: 'Wasps at the entrance — a robbing/predation threat to the colony.' },
 ];
 
 const PIPELINE = [
@@ -59,7 +59,7 @@ const READOUT = [
   { k: 'Active', v: 184, tone: 'text-forest-600' },
   { k: 'Pollen', v: 47, tone: 'text-honey-600' },
   { k: 'Varroa', v: 6, tone: 'text-amberwarn' },
-  { k: 'Dead', v: 2, tone: 'text-clay' },
+  { k: 'Wasp', v: 2, tone: 'text-clay' },
 ];
 
 export default function Home() {
@@ -342,7 +342,7 @@ export default function Home() {
           <Reveal delay={0.15}>
             <div className="grid grid-cols-2 gap-5">
               {[
-                { v: '4', l: 'Bee classes', s: 'Active · Pollen · Varroa · Dead', tone: 'text-forest-700' },
+                { v: '4', l: 'Bee classes', s: 'Bee · Pollen · Varroa · Wasp', tone: 'text-forest-700' },
                 { v: '0–100', l: 'Health index', s: 'A single clinical score', tone: 'text-honey-600' },
                 { v: '~60', l: 'Frames / sec', s: 'When a GPU is available', tone: 'text-forest-700' },
                 { v: '24/7', l: 'Watching', s: 'No manual inspection', tone: 'text-honey-600' },

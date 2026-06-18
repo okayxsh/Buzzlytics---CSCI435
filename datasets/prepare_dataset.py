@@ -24,7 +24,6 @@ from typing import Dict, List
 
 import yaml
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CANONICAL: Dict[str, int] = {"bee": 0, "pollen_bee": 1, "varroa_bee": 2, "wasp": 3}
@@ -161,6 +160,7 @@ def download_datasets(api_key: str, raw_dir: Path) -> List[Path]:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description="Build the unified bee+wasp dataset")
     parser.add_argument("--api-key", default=None, help="Roboflow API key")
     parser.add_argument("--raw-dir", default="datasets/raw")

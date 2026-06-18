@@ -70,46 +70,44 @@ export default function VideoPlayer({ videoUrl }) {
 
   if (!videoUrl) {
     return (
-      <div className="bg-slate-100 border border-slate-200 sharp-edge p-12 text-center text-slate-400 font-mono text-sm uppercase tracking-widest">
-        Video Signal Unavailable
+      <div className="flex items-center justify-center rounded-2xl border border-line bg-sand p-12 text-center text-sm font-medium text-ink-faint">
+        No video to show yet
       </div>
     );
   }
 
   return (
-    <div className="relative bg-slate-900 border border-slate-800 overflow-hidden sharp-edge group" ref={wrapperRef}>
+    <div className="group relative overflow-hidden rounded-2xl border border-line bg-[#1b1a16] shadow-soft" ref={wrapperRef}>
       <video
         ref={videoRef}
         src={videoUrl}
         onEnded={handleVideoEnded}
         onPlay={handlePlay}
         onPause={handlePause}
-        className="w-full block"
+        className="block w-full"
         preload="metadata"
       />
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <button
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-cream/95 text-forest-700 transition-colors hover:bg-honey-300 hover:text-ink"
+          onClick={togglePlay}
+          aria-label={playing ? 'Pause' : 'Play'}
+        >
+          {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+        </button>
         <div className="flex items-center gap-2">
-          <button 
-            className="w-10 h-10 bg-white/10 hover:bg-amber-500 text-white hover:text-slate-900 flex items-center justify-center transition-colors sharp-edge border border-white/20 hover:border-amber-500" 
-            onClick={togglePlay} 
-            title={playing ? 'Pause' : 'Play'}
-          >
-            {playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-1" />}
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button 
-            className="w-10 h-10 bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-colors sharp-edge border border-white/20" 
-            onClick={handleDownload} 
-            title="Download Telemetry"
+          <button
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-cream transition-colors hover:bg-white/30"
+            onClick={handleDownload}
+            aria-label="Download video"
           >
             <Download size={18} />
           </button>
-          <button 
-            className="w-10 h-10 bg-white/10 hover:bg-white/30 text-white flex items-center justify-center transition-colors sharp-edge border border-white/20" 
-            onClick={toggleFullscreen} 
-            title="Fullscreen"
+          <button
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-cream transition-colors hover:bg-white/30"
+            onClick={toggleFullscreen}
+            aria-label="Fullscreen"
           >
             <Maximize size={18} />
           </button>

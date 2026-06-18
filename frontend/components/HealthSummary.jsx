@@ -93,81 +93,79 @@ export default function HealthSummary({ data }) {
 
   const statusConfig = {
     healthy: {
-      text: 'Optimal',
-      subtext: 'Parameters nominal',
-      color: 'text-emerald-500',
-      bg: 'bg-emerald-500/10',
-      border: 'border-emerald-500/30'
+      text: 'Healthy',
+      subtext: 'The colony looks strong',
+      color: 'text-forest-700',
+      bg: 'bg-forest-50',
+      border: 'border-forest-200',
     },
     warning: {
-      text: 'Warning',
-      subtext: 'Deviations detected',
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-      border: 'border-amber-500/30'
+      text: 'Worth a look',
+      subtext: 'A few readings are drifting',
+      color: 'text-honey-600',
+      bg: 'bg-honey-50',
+      border: 'border-honey-200',
     },
     critical: {
-      text: 'Critical',
-      subtext: 'Immediate action required',
-      color: 'text-rose-500',
-      bg: 'bg-rose-500/10',
-      border: 'border-rose-500/30'
+      text: 'Needs attention',
+      subtext: 'Act soon to avoid loss',
+      color: 'text-clay',
+      bg: 'bg-[#F6E6DF]',
+      border: 'border-[#E7C5B7]',
     },
     unknown: {
-      text: 'Standby',
-      subtext: 'Awaiting telemetry',
-      color: 'text-slate-400',
-      bg: 'bg-slate-100',
-      border: 'border-slate-200'
-    }
+      text: 'Standing by',
+      subtext: 'Waiting for the first reading',
+      color: 'text-ink-faint',
+      bg: 'bg-sand',
+      border: 'border-line',
+    },
   };
 
   const current = statusConfig[status];
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header / Main Status */}
-      <div className={`flex items-start gap-4 mb-8 p-4 border sharp-edge ${current.bg} ${current.border}`}>
-        <div className={`w-12 h-12 flex items-center justify-center border sharp-edge bg-white/50 backdrop-blur-sm ${current.border} ${current.color}`}>
+    <div className="flex h-full flex-col">
+      {/* Main status */}
+      <div className={`mb-7 flex items-start gap-4 rounded-2xl border p-5 ${current.bg} ${current.border}`}>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cream/70 ${current.color}`}>
           <StatusIcon size={24} />
         </div>
         <div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">System Status</div>
-          <div className={`text-2xl font-black uppercase tracking-tight ${current.color}`}>
+          <div className="data-label mb-0.5">Overall status</div>
+          <div className={`font-display text-2xl font-semibold ${current.color}`}>
             {current.text}
           </div>
-          <div className="text-xs font-mono text-slate-600 mt-1 uppercase">
-            &gt; {current.subtext}
-          </div>
+          <div className="mt-0.5 text-sm text-ink-soft">{current.subtext}</div>
         </div>
       </div>
 
-      {/* Recommendations List */}
+      {/* Recommendations */}
       <div className="flex-1 space-y-3">
-        <div className="text-xs font-bold text-slate-900 uppercase tracking-widest border-b border-slate-200 pb-2 mb-4">Diagnostics Log</div>
+        <div className="mb-3 border-b border-line pb-2 text-sm font-semibold text-ink">What we noticed</div>
         {recommendations.length === 0 && (
-          <div className="text-sm font-mono text-slate-400 uppercase">No active logs.</div>
+          <div className="text-sm text-ink-faint">No notes yet.</div>
         )}
         {recommendations.map((rec, index) => {
           const RecIcon = rec.icon;
-          const typeColor = rec.type === 'healthy' ? 'text-emerald-500' : rec.type === 'warning' ? 'text-amber-500' : 'text-rose-500';
-          const typeBg = rec.type === 'healthy' ? 'bg-emerald-50' : rec.type === 'warning' ? 'bg-amber-50' : 'bg-rose-50';
-          const typeBorder = rec.type === 'healthy' ? 'border-emerald-200' : rec.type === 'warning' ? 'border-amber-200' : 'border-rose-200';
-          
+          const typeColor = rec.type === 'healthy' ? 'text-forest-600' : rec.type === 'warning' ? 'text-honey-600' : 'text-clay';
+          const typeBg = rec.type === 'healthy' ? 'bg-forest-50' : rec.type === 'warning' ? 'bg-honey-50' : 'bg-[#F6E6DF]';
+          const typeBorder = rec.type === 'healthy' ? 'border-forest-200' : rec.type === 'warning' ? 'border-honey-200' : 'border-[#E7C5B7]';
+
           return (
-            <div key={index} className={`flex items-start gap-3 p-3 border sharp-edge ${typeBg} ${typeBorder}`}>
+            <div key={index} className={`flex items-start gap-3 rounded-xl border p-3.5 ${typeBg} ${typeBorder}`}>
               <RecIcon size={16} className={`mt-0.5 shrink-0 ${typeColor}`} />
-              <span className="text-sm text-slate-700 font-medium leading-snug">{rec.text}</span>
+              <span className="text-sm font-medium leading-snug text-ink-soft">{rec.text}</span>
             </div>
           );
         })}
       </div>
 
-      {/* Footer / Timestamp */}
+      {/* Footer */}
       {data && (
-        <div className="mt-8 pt-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-mono text-slate-400 uppercase">
-          <span>Sys.Time:</span>
-          <span>{new Date().toLocaleString()}</span>
+        <div className="mt-7 flex items-center justify-between border-t border-line pt-4 text-xs text-ink-faint">
+          <span className="font-medium">Last reading</span>
+          <span className="tabular">{new Date().toLocaleString()}</span>
         </div>
       )}
     </div>

@@ -4,32 +4,150 @@
 
 @layer base {
   :root {
-    --background: #f8fafc; /* slate-50 */
-    --foreground: #1e293b; /* slate-800 */
-    
-    --primary: #f59e0b; /* amber-500 */
-    --healthy: #10b981; /* emerald-500 */
-    --danger: #f43f5e; /* rose-500 */
-    --warning: #f59e0b; /* amber-500 */
+    --paper: #faf6ec;
+    --ink: #2b2a24;
+    --forest: #2c7048;
+    --honey: #d98a1f;
+    --healthy: #2e7d4f;
+    --warning: #c98a1e;
+    --danger: #bc4b2e;
+    /* legacy aliases so any stray var() references still resolve */
+    --color-healthy: #2e7d4f;
+    --background: #faf6ec;
+    --foreground: #2b2a24;
+  }
+
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
-    @apply bg-[var(--background)] text-[var(--foreground)] antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--paper);
+    color: var(--ink);
+    font-feature-settings: "ss01";
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display), Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: rgba(217, 138, 31, 0.25);
+    color: var(--ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f2ead7;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d8cbac;
+    border: 3px solid #f2ead7;
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #c4b48c;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* soft naturalist card */
+  .card {
+    @apply rounded-2xl border border-line bg-cream shadow-soft;
+  }
+
+  .card-sand {
+    @apply rounded-2xl border border-line bg-sand;
+  }
+
+  /* small uppercase eyebrow label */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-forest-600;
+  }
+
+  .data-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-faint;
+  }
+
+  /* buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-forest-700 px-7 py-3.5
+           text-sm font-semibold text-cream transition-all duration-200
+           hover:bg-forest-600 hover:shadow-lift active:translate-y-px
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-500
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-honey {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-honey-400 px-7 py-3.5
+           text-sm font-semibold text-ink transition-all duration-200
+           hover:bg-honey-300 hover:shadow-lift active:translate-y-px
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-honey-500
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-soft {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line-strong bg-cream px-7 py-3.5
+           text-sm font-semibold text-ink-soft transition-all duration-200
+           hover:border-forest-300 hover:text-forest-700 hover:bg-forest-50 active:translate-y-px
+           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest-500
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-cream px-3.5 py-1.5
+           text-xs font-semibold text-ink-soft;
+  }
+
+  /* legacy aliases kept so un-migrated markup still renders softly */
+  .glass-panel {
+    @apply rounded-2xl border border-line bg-cream/80 shadow-soft backdrop-blur;
+  }
+  .sharp-edge {
+    @apply rounded-xl;
   }
 }
 
 @layer utilities {
-  .glass-panel {
-    @apply bg-white/60 backdrop-blur-md border border-white/40 shadow-sm rounded-none;
+  .comb-tex {
+    background-image: theme("backgroundImage.comb");
   }
-  
-  .sharp-edge {
-    @apply rounded-none !important;
+  .grain-tex {
+    background-image: theme("backgroundImage.grain");
   }
-}
 
-/* Base resets for sharp geometry */
-* {
-  @apply rounded-none;
+  .mask-soft {
+    -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 100%);
+    mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, #000 50%, transparent 100%);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .underline-honey {
+    text-decoration-color: #edb857;
+    text-underline-offset: 6px;
+    text-decoration-thickness: 2px;
+  }
 }

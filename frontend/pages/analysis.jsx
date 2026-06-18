@@ -1,17 +1,15 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Bug, Video, Radio, AlertTriangle } from 'lucide-react';
+import { Video, AlertTriangle, UploadCloud, BarChart3, RotateCcw, ArrowRight } from 'lucide-react';
 import UploadVideo from '../components/UploadVideo';
 import VideoPlayer from '../components/VideoPlayer';
 import StatsPanel from '../components/StatsPanel';
 import HealthSummary from '../components/HealthSummary';
 import { videoApi } from '../services/api';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 export default function Analysis() {
-  const router = useRouter();
-  const [videoFile, setVideoFile] = useState(null);
   const [processingStatus, setProcessingStatus] = useState('idle');
   const [videoId, setVideoId] = useState(null);
   const [resultData, setResultData] = useState(null);
@@ -21,20 +19,20 @@ export default function Analysis() {
   const pollStatus = useCallback(async (id) => {
     try {
       const response = await videoApi.getStatus(id);
-      const { status, progress, result } = response.data;
+      const { status, result } = response.data;
       if (status === 'completed') {
         setProcessingStatus('done');
         setResultData(result);
         setAnnotatedVideoUrl(videoApi.getResult(id));
       } else if (status === 'failed') {
         setProcessingStatus('error');
-        setError('Processing failed. Please try again.');
+        setError('Processing failed. Please try a different clip.');
       } else {
         setTimeout(() => pollStatus(id), 2000);
       }
     } catch (err) {
       setProcessingStatus('error');
-      setError('Failed to check processing status.');
+      setError('We lost contact while checking on the analysis.');
     }
   }, []);
 
@@ -58,7 +56,6 @@ export default function Analysis() {
   }, []);
 
   const handleReset = useCallback(() => {
-    setVideoFile(null);
     setProcessingStatus('idle');
     setVideoId(null);
     setResultData(null);
@@ -67,137 +64,127 @@ export default function Analysis() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-amber-500/30">
-      {/* Header */}
-      <header className="fixed top-0 w-full z-50 glass-panel border-b border-slate-200/50 px-6 py-4 flex justify-between items-center sharp-edge">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="p-2 bg-amber-500/10 border border-amber-500/20 sharp-edge">
-            <Bug className="w-6 h-6 text-amber-500" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tighter text-slate-900 uppercase hover:text-amber-600 transition-colors">Buzzlytics</h1>
-        </Link>
-        <nav className="flex gap-2">
-          <Link href="/analysis" legacyBehavior>
-            <button className={`px-5 py-2 text-sm font-bold uppercase tracking-wider border transition-colors sharp-edge ${router.pathname === '/analysis' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'}`}>
-              <span className="flex items-center gap-2">
-                <Video className="w-4 h-4" />
-                Analysis
-              </span>
-            </button>
-          </Link>
-          <Link href="/webcam" legacyBehavior>
-            <button className={`px-5 py-2 text-sm font-bold uppercase tracking-wider border transition-colors sharp-edge ${router.pathname === '/webcam' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'}`}>
-              <span className="flex items-center gap-2">
-                <Radio className="w-4 h-4" />
-                Live Feed
-              </span>
-            </button>
-          </Link>
-        </nav>
-      </header>
+    <div className="relative min-h-screen">
+      <Navbar />
 
-      {/* Main Analysis Content */}
-      <div className="relative z-20 pt-32 pb-32 px-6 md:px-12 max-w-7xl mx-auto">
-        <div className="mb-12">
-          <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 mb-2">Video Telemetry</h2>
-          <p className="text-slate-500 font-medium max-w-2xl">Upload hive footage to initiate neural network analysis for Varroa mite detection, activity tracking, and health estimation.</p>
+      <div className="mx-auto max-w-[1240px] px-5 pb-24 pt-32 md:px-8">
+        {/* page heading */}
+        <div className="max-w-2xl">
+          <div className="eyebrow">Video analysis</div>
+          <h1 className="mt-3 font-display text-4xl font-medium leading-tight text-ink md:text-5xl">
+            Upload a clip, <span className="italic text-forest-700">read the colony.</span>
+          </h1>
+          <p className="mt-4 text-lg leading-relaxed text-ink-soft">
+            Drop in footage of your hive entrance. Buzzlytics cleans up each frame, finds and
+            follows every bee, and hands back an annotated video with a full health report.
+          </p>
         </div>
 
-        <motion.section 
+        {/* upload card */}
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="glass-panel p-8 md:p-12 border-slate-200/80 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] mb-12 sharp-edge"
+          className="card mt-12 p-7 md:p-10"
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-slate-200">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 bg-slate-900 flex items-center justify-center sharp-edge">
-                <Video className="w-6 h-6 text-white" />
+          <div className="mb-8 flex flex-col justify-between gap-4 border-b border-line pb-6 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest-700 text-cream">
+                <UploadCloud className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900">Data Ingestion</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.15em] mt-1">Module 01 // Upload</p>
+                <h2 className="font-display text-xl font-semibold text-ink">Footage upload</h2>
+                <p className="text-sm text-ink-faint">Step one · choose a video</p>
               </div>
             </div>
-            <div className="text-xs font-mono text-slate-400">SYS.STATUS: {processingStatus.toUpperCase()}</div>
+            <span className="pill self-start text-ink-soft">
+              <span className="h-2 w-2 rounded-full bg-forest-500" />
+              {processingStatus === 'idle' ? 'Ready' : processingStatus}
+            </span>
           </div>
 
-          {processingStatus === 'idle' && (
-            <UploadVideo onUploadStart={handleUploadStart} onUploadComplete={handleUploadComplete} onUploadError={handleUploadError} />
-          )}
-          
-          {processingStatus === 'uploading' && (
-            <UploadVideo uploading onUploadStart={handleUploadStart} onUploadComplete={handleUploadComplete} onUploadError={handleUploadError} />
+          {(processingStatus === 'idle' || processingStatus === 'uploading') && (
+            <UploadVideo
+              uploading={processingStatus === 'uploading'}
+              onUploadStart={handleUploadStart}
+              onUploadComplete={handleUploadComplete}
+              onUploadError={handleUploadError}
+            />
           )}
 
           {processingStatus === 'processing' && (
-            <div className="py-24 text-center border-2 border-dashed border-amber-500/40 bg-amber-500/5 sharp-edge">
-              <div className="relative w-16 h-16 mx-auto mb-8">
-                <div className="absolute inset-0 border-4 border-slate-200 sharp-edge" />
-                <div className="absolute inset-0 border-4 border-amber-500 border-t-transparent animate-spin sharp-edge" />
+            <div className="rounded-2xl border border-honey-200 bg-honey-50/60 py-20 text-center">
+              <div className="relative mx-auto mb-7 h-14 w-14">
+                <div className="absolute inset-0 rounded-full border-4 border-honey-100" />
+                <div className="absolute inset-0 animate-spin rounded-full border-4 border-honey-400 border-t-transparent" />
               </div>
-              <div className="text-2xl font-black uppercase tracking-wider text-slate-900">Analyzing Footage</div>
-              <div className="text-xs font-bold text-slate-500 mt-3 uppercase tracking-[0.2em]">Executing Neural Networks...</div>
+              <div className="font-display text-2xl font-semibold text-ink">Reading the footage…</div>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
+                Detecting and tracking every bee, frame by frame. This usually takes a moment.
+              </p>
             </div>
           )}
 
           {processingStatus === 'error' && (
-            <div className="p-8 bg-rose-50 border border-rose-200 mb-6 sharp-edge">
-              <div className="text-rose-600 font-black uppercase tracking-wide flex items-center gap-3 mb-4 text-lg">
-                <AlertTriangle className="w-6 h-6" /> System Error
+            <div className="rounded-2xl border border-[#E7C5B7] bg-[#F6E6DF] p-8">
+              <div className="mb-3 flex items-center gap-3 font-display text-xl font-semibold text-clay">
+                <AlertTriangle className="h-6 w-6" /> Something went wrong
               </div>
-              <div className="text-slate-700 mb-8 font-medium">{error}</div>
-              <button className="px-8 py-3 bg-slate-900 text-white font-bold uppercase tracking-wider text-sm hover:bg-slate-800 transition-colors sharp-edge" onClick={handleReset}>
-                Reset Sequence
+              <p className="mb-7 text-ink-soft">{error}</p>
+              <button className="btn-primary" onClick={handleReset}>
+                <RotateCcw className="h-4 w-4" /> Try again
               </button>
             </div>
           )}
         </motion.section>
 
+        {/* results */}
         {processingStatus === 'done' && (
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="space-y-8"
+            className="mt-8 space-y-8"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 glass-panel p-6 md:p-8 border-slate-200/80 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] sharp-edge flex flex-col">
-                 <div className="flex justify-between items-center mb-8 border-b border-slate-200 pb-4">
-                   <div>
-                     <h3 className="font-black text-slate-900 uppercase tracking-tight text-xl">Visual Telemetry</h3>
-                     <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.15em] mt-1">Module 02 // Feed</p>
-                   </div>
-                   <div className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-bold uppercase tracking-[0.15em] border border-emerald-500/20 sharp-edge flex items-center gap-2">
-                     <span className="w-2 h-2 bg-emerald-500 animate-pulse sharp-edge"></span> Live
-                   </div>
-                 </div>
-                 <div className="flex-1">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="card flex flex-col p-7 md:p-8 lg:col-span-2">
+                <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+                  <div className="flex items-center gap-3">
+                    <Video className="h-5 w-5 text-forest-700" />
+                    <h2 className="font-display text-xl font-semibold text-ink">Annotated footage</h2>
+                  </div>
+                  <span className="pill text-forest-700">
+                    <span className="h-2 w-2 animate-pulse-soft rounded-full bg-forest-500" /> Ready
+                  </span>
+                </div>
+                <div className="flex-1">
                   <VideoPlayer videoUrl={annotatedVideoUrl} />
-                 </div>
+                </div>
               </div>
-              <div className="glass-panel p-6 md:p-8 border-slate-200/80 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] sharp-edge">
+
+              <div className="card p-7 md:p-8">
                 <HealthSummary data={resultData} />
               </div>
             </div>
 
-            <div className="glass-panel p-6 md:p-8 border-slate-200/80 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.05)] sharp-edge">
-              <div className="mb-8 border-b border-slate-200 pb-4">
-                <h3 className="font-black text-slate-900 uppercase tracking-tight text-xl">Statistical Aggregation</h3>
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-[0.15em] mt-1">Module 03 // Metrics</p>
+            <div className="card p-7 md:p-8">
+              <div className="mb-7 flex items-center gap-3 border-b border-line pb-4">
+                <BarChart3 className="h-5 w-5 text-forest-700" />
+                <h2 className="font-display text-xl font-semibold text-ink">The numbers</h2>
               </div>
               <StatsPanel data={resultData} />
             </div>
 
-            <div className="flex justify-end pt-8">
-              <button className="px-10 py-5 bg-slate-900 text-white font-black uppercase tracking-[0.15em] text-sm hover:bg-amber-500 hover:text-slate-900 transition-all duration-300 sharp-edge flex items-center gap-3 group" onClick={handleReset}>
-                Initialize New Analysis
-                <span className="group-hover:translate-x-2 transition-transform">→</span>
+            <div className="flex justify-end pt-2">
+              <button className="btn-honey" onClick={handleReset}>
+                Analyze another clip <ArrowRight className="h-4 w-4" />
               </button>
             </div>
           </motion.div>
         )}
       </div>
+
+      <Footer />
     </div>
   );
 }

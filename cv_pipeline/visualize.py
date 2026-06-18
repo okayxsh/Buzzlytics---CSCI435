@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 # Default color map: BGR format for OpenCV drawing
 DEFAULT_COLOR_MAP: Dict[str, Tuple[int, int, int]] = {
-    "active_bee": (0, 200, 0),       # Green
-    "pollen_bee": (0, 220, 255),     # Yellow (BGR)
-    "varroa_infected": (0, 0, 220),  # Red
-    "dead_bee": (160, 160, 160),     # Gray
+    "bee": (0, 200, 0),            # Green
+    "pollen_bee": (0, 220, 255),   # Yellow (BGR)
+    "varroa_bee": (0, 0, 220),     # Red
+    "wasp": (0, 140, 255),         # Orange (BGR)
 }
 
 
@@ -267,8 +267,8 @@ class Visualizer:
             f"Total Bees: {summary.get('total_bees', 0)}",
             f"Active: {summary.get('active_bees', 0)}",
             f"Pollen: {summary.get('pollen_bees', 0)}",
-            f"Varroa: {summary.get('varroa_infected', 0)}",
-            f"Dead: {summary.get('dead_bees', 0)}",
+            f"Varroa: {summary.get('varroa_bees', 0)}",
+            f"Wasps: {summary.get('wasps', 0)}",
             f"Health Score: {summary.get('health_score', 0)}",
             f"Status: {summary.get('health_status', 'N/A')}",
             f"Activity: {summary.get('activity_rate', 0):.1%}",

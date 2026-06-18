@@ -4,7 +4,6 @@ import {
   Activity,
   Flower2,
   AlertTriangle,
-  Skull,
   Percent,
   ShieldAlert,
   Heart,
@@ -72,19 +71,19 @@ export default function StatsPanel({ data }) {
       },
     },
     {
-      key: 'dead_bees',
-      label: 'Dead Bees',
-      icon: Skull,
+      key: 'wasps',
+      label: 'Wasps',
+      icon: ShieldAlert,
       format: (v) => Math.round(v).toLocaleString(),
       getColor: (v, d) => {
         const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        return ratio > 10 ? 'critical' : ratio > 5 ? 'warning' : 'healthy';
+        return ratio > 5 ? 'critical' : ratio > 1 ? 'warning' : 'healthy';
       },
       getTrend: (v, d) => {
         const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        if (ratio > 10) return { dir: 'down', text: 'High' };
-        if (ratio > 5) return { dir: 'neutral', text: 'Moderate' };
-        return { dir: 'up', text: 'Low' };
+        if (ratio > 5) return { dir: 'down', text: 'Threat' };
+        if (ratio > 1) return { dir: 'neutral', text: 'Present' };
+        return { dir: 'up', text: 'Clear' };
       },
     },
     {

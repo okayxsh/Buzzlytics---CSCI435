@@ -13,16 +13,16 @@ export default function HealthSummary({ data }) {
 
     const score = data.health_score ?? 0;
     const infectionRate = data.infection_rate ?? 0;
-    const deadRatio = data.total_bees ? (data.dead_bees ?? 0) / data.total_bees * 100 : 0;
+    const waspRatio = data.total_bees ? (data.wasps ?? 0) / data.total_bees * 100 : 0;
     const pollenRatio = data.total_bees ? (data.pollen_bees ?? 0) / data.total_bees * 100 : 0;
     const activityRate = data.activity_rate ?? 0;
 
     let currentStatus = 'healthy';
     const recs = [];
 
-    if (score < 40 || infectionRate > 15 || deadRatio > 10) {
+    if (score < 40 || infectionRate > 15 || waspRatio > 5) {
       currentStatus = 'critical';
-    } else if (score < 70 || infectionRate > 5 || deadRatio > 5 || activityRate < 30) {
+    } else if (score < 70 || infectionRate > 5 || waspRatio > 1 || activityRate < 30) {
       currentStatus = 'warning';
     }
 
@@ -40,17 +40,17 @@ export default function HealthSummary({ data }) {
       });
     }
 
-    if (deadRatio > 10) {
+    if (waspRatio > 5) {
       recs.push({
         type: 'critical',
         icon: AlertOctagon,
-        text: 'Elevated dead bee count. Inspect hive for disease or pesticide exposure.',
+        text: 'Heavy wasp presence at entrance. Likely robbing/predation — reduce entrance size and inspect.',
       });
-    } else if (deadRatio > 5) {
+    } else if (waspRatio > 1) {
       recs.push({
         type: 'warning',
         icon: AlertTriangle,
-        text: 'Slightly elevated dead bee count. Continue monitoring for changes.',
+        text: 'Wasps detected near the entrance. Monitor for robbing behaviour.',
       });
     }
 

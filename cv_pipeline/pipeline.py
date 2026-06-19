@@ -169,7 +169,10 @@ class CVPipeline:
             detections = self.detector.detect(processed)
 
         # Step 3: Analyze
-        self.analytics.update(tracks if tracks else [])
+        # When the tracker is off (image mode), tracks is [] but detections
+        # holds the raw detector output — pass those instead so analytics
+        # produces non-zero counts for single-frame analysis.
+        self.analytics.update(tracks if tracks else detections)
         summary = self.analytics.get_summary()
 
         # Step 4: Visualize

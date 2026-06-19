@@ -21,6 +21,7 @@ import ActivityTimeline from '../components/ActivityTimeline';
 import { videoApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ClassLegend from '../components/ClassLegend';
 
 const TABS = [
   { id: 'video', label: 'Video', icon: Video },
@@ -303,6 +304,9 @@ export default function Analysis() {
                   <div className="flex-1">
                     <VideoPlayer videoUrl={annotatedVideoUrl} />
                   </div>
+                  <div className="mt-5">
+                    <ClassLegend />
+                  </div>
                 </div>
 
                 <div className="card p-7 md:p-8">
@@ -313,8 +317,11 @@ export default function Analysis() {
 
             {/* Health summary without video — image tab */}
             {isImageTab && (
-              <div className="card p-7 md:p-8">
-                <HealthSummary data={summaryData} />
+              <div className="space-y-4">
+                <ClassLegend />
+                <div className="card p-7 md:p-8">
+                  <HealthSummary data={summaryData} />
+                </div>
               </div>
             )}
 

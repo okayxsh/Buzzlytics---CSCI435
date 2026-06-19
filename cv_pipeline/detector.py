@@ -67,9 +67,11 @@ class BeeDetector:
         model_path: str = "yolov8n.pt",
         conf_threshold: float = 0.25,
         iou_threshold: float = 0.45,
+        imgsz: int = 640,
     ) -> None:
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
+        self.imgsz = imgsz
         self.class_names: Dict[int, str] = dict(BEE_CLASS_NAMES)
         self._model = None
 
@@ -128,6 +130,7 @@ class BeeDetector:
             frame,
             conf=self.conf_threshold,
             iou=self.iou_threshold,
+            imgsz=self.imgsz,
             verbose=False,
         )
 

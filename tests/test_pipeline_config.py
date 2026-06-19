@@ -8,7 +8,7 @@ def test_pipeline_uses_config_conf_threshold():
     cfg = {
         "detector": {"model_path": "missing.pt", "conf_threshold": 0.31,
                      "iou_threshold": 0.4, "imgsz": 640},
-        "tracker": {"max_age": 30, "min_hits": 3, "iou_match": 0.3},
+        "tracker": {"track_buffer": 30, "match_thresh": 0.8},
         "analytics": {
             "pollen_good_threshold": 0.1, "varroa_warn_threshold": 0.15,
             "wasp_threat_threshold": 0.05, "low_activity_threshold": 0.3,

@@ -24,7 +24,7 @@ _DEFAULTS: Dict[str, Any] = {
         "iou_threshold": 0.45,
         "imgsz": 640,
     },
-    "tracker": {"max_age": 30, "min_hits": 3, "iou_match": 0.3},
+    "tracker": {"track_buffer": 30, "match_thresh": 0.8},
     "analytics": {
         "pollen_good_threshold": 0.1,
         "varroa_warn_threshold": 0.15,

@@ -30,7 +30,7 @@ class CVPipeline:
     """Full computer vision pipeline for beehive health monitoring.
 
     Orchestrates the complete processing chain:
-        preprocess -> detect -> track -> analyze -> visualize
+        preprocess -> detect/track -> analyze -> visualize
 
     Can process individual frames for real-time streaming or entire
     video files with progress reporting.
@@ -42,7 +42,9 @@ class CVPipeline:
         conf_threshold: Minimum confidence threshold for detections.
             If None, taken from config.
         use_tracker: Whether to enable multi-object tracking. When
-            disabled, only detection results are used.
+            enabled, model.track() is the sole inference path (no
+            separate detector.detect() call). When disabled, only
+            detector.detect() is used.
         config: Optional pre-loaded config dict. If None, load_config()
             is called to read config.yaml (merged over defaults).
     """
@@ -71,12 +73,27 @@ class CVPipeline:
             for name, bgr in cfg["visualize"]["colors"].items()
         }
 
+        imgsz = det.get("imgsz", 640)
+
         self.detector = BeeDetector(
             model_path=self.model_path,
             conf_threshold=self.conf_threshold,
             iou_threshold=det["iou_threshold"],
+            imgsz=imgsz,
         )
-        self.tracker = BeeTracker() if use_tracker else None
+
+        if use_tracker:
+            trk = cfg["tracker"]
+            self.tracker: Optional[BeeTracker] = BeeTracker(
+                conf_threshold=self.conf_threshold,
+                iou_threshold=det["iou_threshold"],
+                imgsz=imgsz,
+                track_buffer=trk.get("track_buffer", 30),
+                match_thresh=trk.get("match_thresh", 0.8),
+            )
+        else:
+            self.tracker = None
+
         self.analytics = AnalyticsEngine(config=cfg)
         self.visualizer = Visualizer(color_map=color_map)
         self.motion = MotionDetector(**cfg["motion"])
@@ -85,14 +102,21 @@ class CVPipeline:
         self._clahe_clip = pp["clahe_clip_limit"]
         self._denoise_strength = pp["denoise_strength"]
 
+        # frame_skip: process every Nth frame; <=1 means every frame
+        self._frame_skip: int = max(1, int(cfg.get("video", {}).get("frame_skip", 1)))
+
     def process_frame(
         self,
         frame: NDArray[np.uint8],
     ) -> Dict[str, object]:
         """Process a single frame through the full pipeline.
 
-        Executes the complete chain: preprocess -> detect -> track ->
+        Executes the complete chain: preprocess -> detect OR track ->
         analyze -> visualize.
+
+        When the tracker is enabled, model.track() is the SOLE inference
+        path — detector.detect() is NOT called, eliminating the previous
+        double-inference bug.
 
         Args:
             frame: Input BGR frame (HxWxC numpy array).
@@ -103,8 +127,9 @@ class CVPipeline:
                 - tracks: List of Track objects (empty if tracker is
                     disabled).
                 - detections: List of Detection objects from the
-                    current frame.
+                    current frame (empty when tracker is active).
                 - summary: Analytics summary dictionary.
+                - motion: Dict with activity_ratio and blob_count.
 
         Raises:
             ValueError: If the frame is empty or invalid.
@@ -129,22 +154,25 @@ class CVPipeline:
         # Step 1b: Motion detection
         motion_result = self.motion.process(processed)
 
-        # Step 2: Detect
-        detections: List[Detection] = self.detector.detect(processed)
-
-        # Step 3: Track
+        # Step 2: Single inference path — either track OR detect, never both
+        detections: List[Detection] = []
         tracks: List[Track] = []
         track_histories: Optional[Dict[int, List]] = None
 
         if self.tracker is not None:
-            tracks = self.tracker.update(detections, processed, self.model_path)
+            # Tracker is the sole inference path (model.track() inside)
+            tracks = self.tracker.update(processed, self.model_path)
             track_histories = self.tracker.get_track_histories()
+            # detections stays empty — analytics/visualize use tracks
+        else:
+            # Detection-only path
+            detections = self.detector.detect(processed)
 
-        # Step 4: Analyze
+        # Step 3: Analyze
         self.analytics.update(tracks if tracks else [])
         summary = self.analytics.get_summary()
 
-        # Step 5: Visualize
+        # Step 4: Visualize
         annotated = self.visualizer.annotate_frame(
             frame=processed,
             tracks=tracks if tracks else None,
@@ -172,8 +200,10 @@ class CVPipeline:
         """Process an entire video file through the pipeline.
 
         Processes each frame sequentially and yields progress
-        information after each frame. The generator returns a final
-        results dictionary when exhausted.
+        information after each frame. Frames at indices where
+        ``idx % frame_skip != 0`` are skipped: the previous annotated
+        frame and summary are reused for the output video and progress
+        yields. ``frame_skip <= 1`` means every frame is processed.
 
         Args:
             video_path: Path to the input video file.
@@ -192,6 +222,7 @@ class CVPipeline:
                 - avg_bees: Average bee count across all frames.
                 - final_summary: Analytics summary from the last frame.
                 - output_path: Path to the output video (or None).
+                - timeline: Per-frame activity list.
 
         Raises:
             FileNotFoundError: If the video file does not exist.
@@ -230,14 +261,29 @@ class CVPipeline:
         frame_number = 0
         final_summary: Dict[str, object] = {}
 
+        # Seed with a blank result so skipped frames before first
+        # processed frame have something to reuse
+        last_result: Optional[Dict[str, object]] = None
+
         try:
             while True:
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                # Process the frame
-                result = self.process_frame(frame)
+                # frame_skip: only process every Nth frame
+                if self._frame_skip > 1 and frame_number % self._frame_skip != 0:
+                    # Reuse the previous frame's result
+                    if last_result is not None:
+                        result = last_result
+                    else:
+                        # Edge case: haven't processed even one frame yet;
+                        # force process this frame to seed last_result
+                        result = self.process_frame(frame)
+                        last_result = result
+                else:
+                    result = self.process_frame(frame)
+                    last_result = result
 
                 # Record bee count
                 total_bees = result["summary"].get("total_bees", 0)

@@ -187,8 +187,14 @@ def _download_roboflow(
     req = urllib.request.Request(link, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=300) as resp:
         data = resp.read()
+    target = location.resolve()
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        zf.extractall(str(location))
+        # Guard against Zip Slip: reject any member that escapes ``location``.
+        for member in zf.namelist():
+            dest = (target / member).resolve()
+            if target != dest and target not in dest.parents:
+                raise RuntimeError(f"Zip entry escapes target directory: {member}")
+        zf.extractall(str(target))
     return location
 
 

@@ -37,6 +37,7 @@ export default function Analysis() {
   const [summaryData, setSummaryData] = useState(null);    // analytics dict for StatsPanel/HealthSummary
   const [timelineData, setTimelineData] = useState([]);    // array for ActivityTimeline
   const [annotatedVideoUrl, setAnnotatedVideoUrl] = useState(null);
+  const [annotatedImageUrl, setAnnotatedImageUrl] = useState(null);
   const [error, setError] = useState(null);
 
   // ─── Video handlers ───────────────────────────────────────────────────────
@@ -90,12 +91,14 @@ export default function Analysis() {
     setSummaryData(null);
     setTimelineData([]);
     setAnnotatedVideoUrl(null);
+    setAnnotatedImageUrl(null);
   }, []);
 
   const handleImageUploadComplete = useCallback((data) => {
     // UploadImage passes the UNWRAPPED data object: { summary, motion, annotated_image }
     setResultData(data);
     setSummaryData(data?.summary ?? null);
+    setAnnotatedImageUrl(data?.annotated_image || null);
     setTimelineData([]); // single image — no timeline
     setProcessingStatus('done');
   }, []);
@@ -114,6 +117,7 @@ export default function Analysis() {
     setSummaryData(null);
     setTimelineData([]);
     setAnnotatedVideoUrl(null);
+    setAnnotatedImageUrl(null);
     setError(null);
   }, []);
 
@@ -285,13 +289,45 @@ export default function Analysis() {
               </div>
             )}
 
-            {/* Health summary without video — image tab */}
+            {/* Health summary + annotated image — image tab */}
             {isImageTab && (
               <div className="space-y-4">
-                <ClassLegend />
-                <div className="card p-7 md:p-8">
-                  <HealthSummary data={summaryData} />
-                </div>
+                {annotatedImageUrl ? (
+                  <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                    <div className="card flex flex-col p-7 md:p-8 lg:col-span-2">
+                      <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+                        <div className="flex items-center gap-3">
+                          <ImageIcon className="h-5 w-5 text-forest-700" />
+                          <h2 className="font-display text-xl font-semibold text-ink">
+                            Annotated image
+                          </h2>
+                        </div>
+                        <span className="pill text-forest-700">
+                          <span className="h-2 w-2 animate-pulse-soft rounded-full bg-forest-500" />{' '}
+                          Ready
+                        </span>
+                      </div>
+                      <img
+                        src={`data:image/jpeg;base64,${annotatedImageUrl}`}
+                        alt="Annotated"
+                        className="w-full rounded-xl"
+                      />
+                      <div className="mt-5">
+                        <ClassLegend />
+                      </div>
+                    </div>
+                    <div className="card p-7 md:p-8">
+                      <HealthSummary data={summaryData} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <ClassLegend />
+                    <div className="card p-7 md:p-8">
+                      <HealthSummary data={summaryData} />
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

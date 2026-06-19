@@ -13,6 +13,7 @@ import os
 from typing import Dict, Generator, List, Optional
 
 import cv2
+import imageio.v2 as imageio
 import numpy as np
 from numpy.typing import NDArray
 
@@ -252,11 +253,10 @@ class CVPipeline:
         frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
         # Set up video writer if output path is specified
-        writer: Optional[cv2.VideoWriter] = None
+        writer = None
         if output_path is not None:
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            writer = cv2.VideoWriter(
-                output_path, fourcc, fps, (frame_w, frame_h)
+            writer = imageio.get_writer(
+                output_path, fps=fps, codec="libx264", macro_block_size=8
             )
 
         bee_counts: List[int] = []
@@ -301,9 +301,9 @@ class CVPipeline:
 
                 final_summary = result["summary"]
 
-                # Write annotated frame to output video
+                # Write annotated frame to output video (imageio expects RGB)
                 if writer is not None:
-                    writer.write(result["annotated_frame"])
+                    writer.append_data(cv2.cvtColor(result["annotated_frame"], cv2.COLOR_BGR2RGB))
 
                 frame_number += 1
 
@@ -317,7 +317,7 @@ class CVPipeline:
         finally:
             cap.release()
             if writer is not None:
-                writer.release()
+                writer.close()
 
         # Compute average bees
         avg_bees = 0.0

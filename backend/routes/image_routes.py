@@ -101,9 +101,13 @@ async def process_image(
         raise HTTPException(status_code=400, detail=str(exc))
 
     # Run through CV pipeline (lazy — one pipeline per request is fine for
-    # a stateless image endpoint)
+    # a stateless image endpoint).
+    # use_tracker=False: ByteTrack needs consecutive frames to confirm track
+    # IDs, so a single image always yields ~0 tracks and empty counts.
+    # Detection-only mode runs detector.detect() directly and feeds those
+    # results into analytics, giving correct counts on a single image.
     try:
-        pipeline = CVPipeline()
+        pipeline = CVPipeline(use_tracker=False)
         result = pipeline.process_frame(frame)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Pipeline processing failed: {exc}")

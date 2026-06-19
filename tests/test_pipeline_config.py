@@ -19,6 +19,8 @@ def test_pipeline_uses_config_conf_threshold():
         "visualize": {"colors": {"bee": [0, 200, 0], "pollen_bee": [0, 220, 255],
                                  "varroa_bee": [0, 0, 220], "wasp": [0, 140, 255]}},
         "video": {"frame_skip": 2},
+        "motion": {"history": 500, "var_threshold": 16, "detect_shadows": True, "kernel_size": 3},
+        "preprocess": {"white_balance": True, "clahe_clip_limit": 2.0, "denoise_strength": 10},
     }
     # Patch ultralytics.YOLO so no model file is needed in the test environment.
     with patch("ultralytics.YOLO", return_value=MagicMock()):

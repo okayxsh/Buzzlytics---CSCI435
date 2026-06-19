@@ -13,4 +13,14 @@ export const videoApi = {
   deleteResult: (videoId) => axios.delete(`${API_BASE}/video/result/${videoId}`),
 };
 
+export const imageApi = {
+  process: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axios.post(`${API_BASE}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+
 export const WS_URL = 'ws://localhost:8000/ws/webcam';

@@ -47,6 +47,11 @@ _DEFAULTS: Dict[str, Any] = {
         }
     },
     "video": {"frame_skip": 2},
+    "preprocess": {
+        "white_balance": True,
+        "clahe_clip_limit": 2.0,
+        "denoise_strength": 10,
+    },
 }
 
 

@@ -124,23 +124,56 @@ def denoise(
     return result
 
 
+def apply_white_balance(frame: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    """Gray-world white balance: scale each BGR channel so their means match.
+
+    Corrects colour casts from dawn/dusk/overcast hive footage before
+    detection. Returns a BGR uint8 frame of the same shape.
+
+    Args:
+        frame: Input BGR frame (HxWxC numpy array).
+
+    Returns:
+        White-balanced BGR frame of the same shape and dtype as input.
+
+    Raises:
+        TypeError: If the frame is not a numpy array.
+        ValueError: If the frame is empty.
+    """
+    if not isinstance(frame, np.ndarray):
+        raise TypeError(f"Expected numpy array, got {type(frame).__name__}")
+    if frame.size == 0:
+        raise ValueError("Cannot white-balance an empty frame")
+    result = frame.astype(np.float32)
+    means = result.reshape(-1, 3).mean(axis=0)
+    gray = float(means.mean())
+    for c in range(3):
+        if means[c] > 1e-6:
+            result[:, :, c] *= gray / means[c]
+    return np.clip(result, 0, 255).astype(np.uint8)
+
+
 def preprocess_frame(
     frame: NDArray[np.uint8],
     clip_limit: float = 2.0,
     tile_grid_size: Tuple[int, int] = (8, 8),
     denoise_strength: int = 10,
+    white_balance: bool = True,
 ) -> NDArray[np.uint8]:
     """Full preprocessing pipeline for a beehive monitoring frame.
 
-    Applies denoising first to remove sensor noise, then CLAHE to
-    correct for uneven illumination. This order prevents noise
-    amplification that can occur if CLAHE is applied to noisy data.
+    Applies white balance first to correct colour casts, then denoising
+    to remove sensor noise, then CLAHE to correct for uneven illumination.
+    This order prevents noise amplification and ensures colour correction
+    precedes contrast enhancement.
 
     Args:
         frame: Input BGR frame (HxWxC numpy array).
         clip_limit: CLAHE clip limit. Defaults to 2.0.
         tile_grid_size: CLAHE grid size. Defaults to (8, 8).
         denoise_strength: Denoising strength. Defaults to 10.
+        white_balance: Apply gray-world white balance before denoise/CLAHE.
+            Defaults to True.
 
     Returns:
         Preprocessed BGR frame of the same shape and dtype as input.
@@ -157,9 +190,14 @@ def preprocess_frame(
     if frame.size == 0:
         raise ValueError("Cannot preprocess an empty frame")
 
+    # Step 0: White balance to correct colour casts from varying light
+    current: NDArray[np.uint8] = (
+        apply_white_balance(frame) if white_balance else frame
+    )
+
     # Step 1: Denoise to remove sensor noise
     denoised: NDArray[np.uint8] = denoise(
-        frame, strength=denoise_strength
+        current, strength=denoise_strength
     )
 
     # Step 2: Apply CLAHE for illumination correction

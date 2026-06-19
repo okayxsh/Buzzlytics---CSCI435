@@ -31,3 +31,8 @@ visualize:
 
 video:
   frame_skip: 2
+
+preprocess:
+  white_balance: true
+  clahe_clip_limit: 2.0
+  denoise_strength: 10

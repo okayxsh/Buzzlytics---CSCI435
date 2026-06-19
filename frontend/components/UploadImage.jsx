@@ -196,26 +196,6 @@ export default function UploadImage({ onUploadStart, onUploadComplete, onUploadE
             </div>
           )}
 
-          {/* Summary + motion */}
-          <div className="rounded-2xl border border-line bg-cream p-5 shadow-soft">
-            {result.summary && (
-              <div className="mb-3">
-                <div className="data-label mb-1">Summary</div>
-                <p className="text-sm text-ink-soft leading-relaxed">{result.summary}</p>
-              </div>
-            )}
-            {result.motion !== undefined && result.motion !== null && (
-              <div>
-                <div className="data-label mb-1">Motion Score</div>
-                <div className="font-display text-2xl font-semibold text-ink">
-                  {typeof result.motion === 'number'
-                    ? result.motion.toFixed(2)
-                    : result.motion}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Reset */}
           <div className="flex gap-3">
             <button className="btn-soft flex-1" onClick={handleRemoveFile}>

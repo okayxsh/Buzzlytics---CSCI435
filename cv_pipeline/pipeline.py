@@ -80,7 +80,10 @@ class CVPipeline:
         self.analytics = AnalyticsEngine(config=cfg)
         self.visualizer = Visualizer(color_map=color_map)
         self.motion = MotionDetector(**cfg["motion"])
-        self._white_balance = cfg["preprocess"]["white_balance"]
+        pp = cfg["preprocess"]
+        self._white_balance = pp["white_balance"]
+        self._clahe_clip = pp["clahe_clip_limit"]
+        self._denoise_strength = pp["denoise_strength"]
 
     def process_frame(
         self,
@@ -116,7 +119,12 @@ class CVPipeline:
             raise ValueError("Cannot process an empty frame")
 
         # Step 1: Preprocess
-        processed = preprocess_frame(frame, white_balance=self._white_balance)
+        processed = preprocess_frame(
+            frame,
+            white_balance=self._white_balance,
+            clip_limit=self._clahe_clip,
+            denoise_strength=self._denoise_strength,
+        )
 
         # Step 1b: Motion detection
         motion_result = self.motion.process(processed)

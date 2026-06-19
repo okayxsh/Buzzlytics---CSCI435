@@ -31,7 +31,6 @@ export default function Footer() {
             <div className="data-label mb-5">Platform</div>
             <ul className="space-y-3 text-sm text-ink-soft">
               <li><Link href="/analysis" className="transition-colors hover:text-forest-700">Video Analysis</Link></li>
-              <li><Link href="/webcam" className="transition-colors hover:text-forest-700">Live Webcam Feed</Link></li>
               <li><Link href="/#capabilities" className="transition-colors hover:text-forest-700">Capabilities</Link></li>
               <li><Link href="/#how" className="transition-colors hover:text-forest-700">How It Works</Link></li>
             </ul>

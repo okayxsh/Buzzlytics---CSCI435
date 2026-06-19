@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Video, Radio, Menu, X } from 'lucide-react';
+import { Video, Menu, X } from 'lucide-react';
 
 const LINKS = [
   { href: '/#capabilities', label: 'Capabilities' },
@@ -11,7 +11,6 @@ const LINKS = [
 
 const APPS = [
   { href: '/analysis', label: 'Analysis', icon: Video },
-  { href: '/webcam', label: 'Live Feed', icon: Radio },
 ];
 
 function Mark() {

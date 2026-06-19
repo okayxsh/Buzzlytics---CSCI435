@@ -47,7 +47,7 @@ const PIPELINE = [
 ];
 
 const FEATURES = [
-  { icon: Camera, title: 'Recorded or live', body: 'Upload a clip for a full report, or open a webcam for instant annotated streaming over WebSockets.' },
+  { icon: Camera, title: 'Recorded or still', body: 'Upload a clip or a still image for a full annotated report.' },
   { icon: Crosshair, title: 'Bee-by-bee detail', body: 'Color-coded boxes and motion trails drawn on every frame of the output video.' },
   { icon: HeartPulse, title: 'Clinical scoring', body: 'A 0–100 health index with Healthy / Watch / Critical bands and threshold alerts.' },
   { icon: Activity, title: 'Live metrics', body: 'Counts, activity rate and infection rate update continuously as the feed runs.' },
@@ -121,7 +121,7 @@ export default function Home() {
               <Link href="/analysis" className="btn-primary">
                 Analyze a video <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link href="/webcam" className="btn-soft">
+              <Link href="/analysis" className="btn-soft">
                 <Radio className="h-4 w-4" /> Open live feed
               </Link>
             </motion.div>
@@ -379,7 +379,7 @@ export default function Home() {
                   Analyze a video <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
-                  href="/webcam"
+                  href="/analysis"
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-forest-300/40 bg-forest-600/40 px-7 py-3.5 text-sm font-semibold text-cream transition-all hover:bg-forest-600/70"
                 >
                   <Radio className="h-4 w-4" /> Open live feed

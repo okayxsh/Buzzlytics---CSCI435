@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import {
   Image as ImageIcon,
   Video,
-  Camera,
   AlertTriangle,
   UploadCloud,
   BarChart3,
@@ -26,7 +25,6 @@ import ClassLegend from '../components/ClassLegend';
 const TABS = [
   { id: 'video', label: 'Video', icon: Video },
   { id: 'image', label: 'Image', icon: ImageIcon },
-  { id: 'webcam', label: 'Webcam', icon: Camera },
 ];
 
 export default function Analysis() {
@@ -130,7 +128,6 @@ export default function Analysis() {
 
   const isVideoTab = activeTab === 'video';
   const isImageTab = activeTab === 'image';
-  const isWebcamTab = activeTab === 'webcam';
 
   return (
     <div className="relative min-h-screen">
@@ -145,8 +142,8 @@ export default function Analysis() {
             <span className="italic text-forest-700">read the colony.</span>
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-ink-soft">
-            Drop in a video, a still frame, or go live with a webcam. Buzzlytics cleans up
-            every frame, finds and follows every bee, and hands back a full health report.
+            Drop in a video or a still frame. Buzzlytics cleans up every frame, finds and
+            follows every bee, and hands back a full health report.
           </p>
         </div>
 
@@ -167,33 +164,6 @@ export default function Analysis() {
             </button>
           ))}
         </div>
-
-        {/* ── Webcam tab — links to dedicated page ────────────────────────── */}
-        {isWebcamTab && (
-          <motion.section
-            key="webcam"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="card mt-8 flex flex-col items-center justify-center gap-6 p-12 text-center"
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-forest-50 text-forest-600 shadow-soft">
-              <Camera className="h-8 w-8" />
-            </div>
-            <div>
-              <div className="font-display text-2xl font-semibold text-ink">
-                Live webcam analysis
-              </div>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
-                Point a webcam at the hive entrance for real-time detection and live colony
-                statistics.
-              </p>
-            </div>
-            <Link href="/webcam" className="btn-primary">
-              <Camera className="h-4 w-4" /> Open webcam view
-            </Link>
-          </motion.section>
-        )}
 
         {/* ── Upload card (Video or Image tab) ─────────────────────────────── */}
         {(isVideoTab || isImageTab) && (

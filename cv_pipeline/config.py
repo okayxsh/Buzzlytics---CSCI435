@@ -46,6 +46,12 @@ _DEFAULTS: Dict[str, Any] = {
             "wasp": [0, 140, 255],
         }
     },
+    "motion": {
+        "history": 500,
+        "var_threshold": 16,
+        "detect_shadows": True,
+        "kernel_size": 3,
+    },
     "video": {"frame_skip": 2},
     "preprocess": {
         "white_balance": True,

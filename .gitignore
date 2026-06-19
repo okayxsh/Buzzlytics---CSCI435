@@ -24,6 +24,12 @@ runs/
 datasets/images/
 datasets/labels/
 datasets/*.zip
+# Downloaded raw Roboflow exports + merged splits (large; keep only bee_dataset.yaml)
+datasets/raw/
+datasets/data/train/
+datasets/data/valid/
+datasets/data/test/
+datasets/recon.py
 *.mp4
 *.avi
 *.mov

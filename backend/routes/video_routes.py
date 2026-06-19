@@ -63,10 +63,12 @@ def _process_video_task(video_id: str, input_path: str, output_path: str) -> Non
             total_frames = result.get("total_frames", 0)
             avg_bees = result.get("avg_bees", 0.0)
             final_summary = result.get("final_summary", {})
+            timeline = result.get("timeline", [])
             summary = {
                 "total_frames": total_frames,
                 "avg_bees": avg_bees,
                 "final_summary": final_summary,
+                "timeline": timeline,
             }
         else:
             # If process_video returns something unexpected, store it raw

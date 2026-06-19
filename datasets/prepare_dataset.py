@@ -34,9 +34,14 @@ ALIASES: Dict[str, str] = {
     "bee": "bee", "bees": "bee", "honeybee": "bee", "worker": "bee",
     "pollen": "pollen_bee", "pollenbearing": "pollen_bee",
     "pollen_bee": "pollen_bee", "pollenbee": "pollen_bee",
-    "varroa": "varroa_bee", "varroa_bee": "varroa_bee", "mite": "varroa_bee",
-    "varroa_infected": "varroa_bee", "varroamite": "varroa_bee",
+    "varroa": "varroa_bee", "varroa_bee": "varroa_bee",
+    "varroa_infected": "varroa_bee",
+    # NOTE: hofer's standalone "mite", "queen", "queen_cell" classes are
+    # intentionally NOT mapped -> dropped. We only keep bee/pollen/varroa.
+    # Wasp class is sourced from the Vespa orientalis (Oriental hornet)
+    # dataset, a real honeybee-hive predator, since Audev's export is broken.
     "wasp": "wasp", "wasps": "wasp", "hornet": "wasp",
+    "vespa_orientalis": "wasp", "vespaorientalis": "wasp", "vespa": "wasp",
 }
 
 
@@ -134,28 +139,83 @@ def _merge_split(
     return count
 
 
-def download_datasets(api_key: str, raw_dir: Path) -> List[Path]:
-    """Download Hofer bees + Audev wasps via Roboflow. Returns dataset roots."""
-    from roboflow import Roboflow
+def _download_roboflow(
+    api_key: str, ws: str, proj: str, version: int, location: Path
+) -> Path:
+    """Download a Roboflow YOLOv8 export via the REST export link.
 
-    rf = Roboflow(api_key=api_key)
+    The roboflow SDK's ``version.download`` builds a regional-bucket URL
+    that 404s for some Universe projects. The public REST endpoint returns
+    a working signed ``export.link`` instead, which we fetch and unzip.
+
+    Args:
+        api_key: Roboflow private API key.
+        ws: Workspace slug.
+        proj: Project slug.
+        version: Dataset version number.
+        location: Destination directory (created if missing).
+
+    Returns:
+        The destination path containing the extracted dataset.
+
+    Raises:
+        RuntimeError: If no export link is available after retries.
+    """
+    import io
+    import json
+    import time
+    import urllib.request
+    import zipfile
+
+    location.mkdir(parents=True, exist_ok=True)
+    api = (
+        f"https://api.roboflow.com/{ws}/{proj}/{version}/yolov8"
+        f"?api_key={api_key}"
+    )
+    link = None
+    for attempt in range(5):
+        with urllib.request.urlopen(api, timeout=60) as resp:
+            payload = json.load(resp)
+        link = payload.get("export", {}).get("link")
+        if link:
+            break
+        logger.info("export not ready for %s/%s (attempt %d); waiting...", ws, proj, attempt + 1)
+        time.sleep(10)
+    if not link:
+        raise RuntimeError(f"No export link for {ws}/{proj} v{version}")
+
+    req = urllib.request.Request(link, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=300) as resp:
+        data = resp.read()
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        zf.extractall(str(location))
+    return location
+
+
+def download_datasets(api_key: str, raw_dir: Path) -> List[Path]:
+    """Download bee + wasp datasets via Roboflow REST. Returns dataset roots.
+
+    Sources:
+        - andrew-hofer-1qh7e/bees-ytrmp v5: bee/pollen/varroa (+ unused classes).
+        - tfg-g55nk/vespa-orientalis v3: Oriental hornet, mapped to the wasp
+          class (a real honeybee-hive predator). Substitutes Audev/wasps,
+          whose Roboflow export is broken server-side.
+    """
     roots: List[Path] = []
-    # Hofer bees (bee/pollen/varroa)
-    bees = (
-        rf.workspace("andrew-hofer-1qh7e")
-        .project("bees-ytrmp")
-        .version(1)
-        .download("yolov8", location=str(raw_dir / "hofer"))
-    )
-    roots.append(Path(bees.location))
-    # Audev wasps
-    wasps = (
-        rf.workspace("audev")
-        .project("wasps")
-        .version(1)
-        .download("yolov8", location=str(raw_dir / "wasps"))
-    )
-    roots.append(Path(wasps.location))
+
+    # (workspace, project, version, local sub-dir).
+    sources = [
+        ("andrew-hofer-1qh7e", "bees-ytrmp", 5, "hofer"),
+        ("tfg-g55nk", "vespa-orientalis", 3, "wasps"),
+    ]
+    for ws, proj_id, vnum, sub in sources:
+        location = raw_dir / sub
+        if (location / "data.yaml").is_file():
+            logger.info("%s already downloaded at %s; skipping.", sub, location)
+            roots.append(location)
+            continue
+        logger.info("downloading %s (%s/%s v%d)...", sub, ws, proj_id, vnum)
+        roots.append(_download_roboflow(api_key, ws, proj_id, vnum, location))
     return roots
 
 

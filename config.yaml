@@ -29,5 +29,16 @@ visualize:
     varroa_bee: [0, 0, 220]
     wasp: [0, 140, 255]
 
+motion:
+  history: 500
+  var_threshold: 16
+  detect_shadows: true
+  kernel_size: 3
+
 video:
   frame_skip: 2
+
+preprocess:
+  white_balance: true
+  clahe_clip_limit: 2.0
+  denoise_strength: 10

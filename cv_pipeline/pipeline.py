@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 
 from .analytics import AnalyticsEngine
 from .detector import BeeDetector, Detection
+from .motion import MotionDetector
 from .preprocess import preprocess_frame
 from .tracker import BeeTracker, Track
 from .visualize import Visualizer
@@ -78,6 +79,11 @@ class CVPipeline:
         self.tracker = BeeTracker() if use_tracker else None
         self.analytics = AnalyticsEngine(config=cfg)
         self.visualizer = Visualizer(color_map=color_map)
+        self.motion = MotionDetector(**cfg["motion"])
+        pp = cfg["preprocess"]
+        self._white_balance = pp["white_balance"]
+        self._clahe_clip = pp["clahe_clip_limit"]
+        self._denoise_strength = pp["denoise_strength"]
 
     def process_frame(
         self,
@@ -113,7 +119,15 @@ class CVPipeline:
             raise ValueError("Cannot process an empty frame")
 
         # Step 1: Preprocess
-        processed = preprocess_frame(frame)
+        processed = preprocess_frame(
+            frame,
+            white_balance=self._white_balance,
+            clip_limit=self._clahe_clip,
+            denoise_strength=self._denoise_strength,
+        )
+
+        # Step 1b: Motion detection
+        motion_result = self.motion.process(processed)
 
         # Step 2: Detect
         detections: List[Detection] = self.detector.detect(processed)
@@ -144,6 +158,10 @@ class CVPipeline:
             "tracks": tracks,
             "detections": detections,
             "summary": summary,
+            "motion": {
+                "activity_ratio": motion_result.activity_ratio,
+                "blob_count": motion_result.blob_count,
+            },
         }
 
     def process_video(
@@ -208,6 +226,7 @@ class CVPipeline:
             )
 
         bee_counts: List[int] = []
+        timeline: List[Dict[str, object]] = []
         frame_number = 0
         final_summary: Dict[str, object] = {}
 
@@ -223,6 +242,13 @@ class CVPipeline:
                 # Record bee count
                 total_bees = result["summary"].get("total_bees", 0)
                 bee_counts.append(int(total_bees))
+
+                # Accumulate activity timeline
+                timeline.append({
+                    "frame": frame_number,
+                    "activity_ratio": result["motion"]["activity_ratio"],
+                    "total_bees": int(total_bees),
+                })
 
                 final_summary = result["summary"]
 
@@ -254,6 +280,7 @@ class CVPipeline:
             "avg_bees": round(avg_bees, 2),
             "final_summary": final_summary,
             "output_path": output_path,
+            "timeline": timeline,
         }
 
     def reset(self) -> None:

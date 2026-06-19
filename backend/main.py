@@ -17,7 +17,7 @@ PROJECT_ROOT = BACKEND_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.routes import video_routes, websocket_routes
+from backend.routes import image_routes, video_routes, websocket_routes
 
 
 @asynccontextmanager
@@ -61,6 +61,7 @@ app.add_middleware(
 # Include route routers
 app.include_router(video_routes.router)
 app.include_router(websocket_routes.router)
+app.include_router(image_routes.router)
 
 
 @app.get("/api/health")

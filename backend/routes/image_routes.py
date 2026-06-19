@@ -106,7 +106,7 @@ async def process_image(
         pipeline = CVPipeline()
         result = pipeline.process_frame(frame)
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Pipeline processing failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Pipeline processing failed: {exc}")
 
     # Extract components from the result dict
     annotated_frame = result.get("annotated_frame", frame)

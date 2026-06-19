@@ -106,3 +106,18 @@ def test_image_endpoint_invalid_image_returns_400(client):
         files={"file": ("bad.png", io.BytesIO(garbage), "image/png")},
     )
     assert response.status_code == 400
+
+
+def test_image_endpoint_pipeline_error_returns_500(client):
+    """When CVPipeline.process_frame raises, the endpoint must return 500."""
+    png_bytes = _make_png_bytes()
+    with patch(
+        "backend.routes.image_routes.CVPipeline.process_frame",
+        side_effect=RuntimeError("simulated pipeline failure"),
+    ):
+        response = client.post(
+            "/api/image",
+            files={"file": ("test.png", io.BytesIO(png_bytes), "image/png")},
+        )
+    assert response.status_code == 500
+    assert "Pipeline processing failed" in response.json()["detail"]

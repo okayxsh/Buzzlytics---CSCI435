@@ -13,6 +13,16 @@ export default function StatsPanel({ data }) {
   const [animatedValues, setAnimatedValues] = useState({});
   const animationRefs = useRef({});
 
+  // Derive pollen percentage so the animation target is the % value
+  const derivedData = data
+    ? {
+        ...data,
+        pollen_pct: data.total_bees
+          ? (data.pollen_bees / data.total_bees) * 100
+          : 0,
+      }
+    : null;
+
   const metrics = [
     {
       key: 'total_bees',
@@ -39,18 +49,14 @@ export default function StatsPanel({ data }) {
       },
     },
     {
-      key: 'pollen_bees',
-      label: 'Pollen-Carrying',
+      key: 'pollen_pct',
+      label: 'Pollen %',
       icon: Flower2,
-      format: (v) => Math.round(v).toLocaleString(),
-      getColor: (v, d) => {
-        const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        return ratio > 5 ? 'healthy' : 'warning';
-      },
-      getTrend: (v, d) => {
-        const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        if (ratio > 10) return { dir: 'up', text: 'Strong' };
-        if (ratio > 5) return { dir: 'neutral', text: 'Fair' };
+      format: (v) => `${v.toFixed(1)}%`,
+      getColor: (v) => (v > 5 ? 'healthy' : 'warning'),
+      getTrend: (v) => {
+        if (v > 10) return { dir: 'up', text: 'Strong' };
+        if (v > 5) return { dir: 'neutral', text: 'Fair' };
         return { dir: 'down', text: 'Low' };
       },
     },
@@ -127,10 +133,10 @@ export default function StatsPanel({ data }) {
 
   // Animate values
   useEffect(() => {
-    if (!data) return;
+    if (!derivedData) return;
 
     metrics.forEach(({ key }) => {
-      const target = data[key] ?? 0;
+      const target = derivedData[key] ?? 0;
       const current = animatedValues[key] || 0;
 
       if (Math.abs(target - current) < 0.5) {
@@ -184,7 +190,7 @@ export default function StatsPanel({ data }) {
     neutral: { bg: 'bg-sand', text: 'text-ink-soft', border: 'border-line-strong' },
   };
 
-  if (!data) {
+  if (!derivedData) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -207,9 +213,9 @@ export default function StatsPanel({ data }) {
       {metrics.map(
         ({ key, label, icon: Icon, format, getColor, getTrend, isHealthScore }) => {
           const value = animatedValues[key] ?? 0;
-          const status = getColor(data[key] ?? 0, data);
+          const status = getColor(derivedData[key] ?? 0, derivedData);
           const style = colorStyles[status];
-          const trend = getTrend(data[key] ?? 0, data);
+          const trend = getTrend(derivedData[key] ?? 0, derivedData);
           const trStyle = trend ? trendStyles[trend.dir] : null;
 
           return (

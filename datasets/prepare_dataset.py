@@ -53,14 +53,17 @@ logger = logging.getLogger(__name__)
 # Unified (canonical) class ids — wasp intentionally dropped.
 CANONICAL: Dict[str, int] = {"bee": 0, "pollen_bee": 1, "varroa_bee": 2}
 
-# Zenodo VarroaDataset direct file URLs (CC-BY-4.0).
-ZENODO_BASE = "https://zenodo.org/records/4085044/files"
-VARROA_FILES = {
-    "train.zip": f"{ZENODO_BASE}/train.zip?download=1",
-    "val.zip": f"{ZENODO_BASE}/val.zip?download=1",
-    "test.zip": f"{ZENODO_BASE}/test.zip?download=1",
-    "gt.csv": f"{ZENODO_BASE}/gt.csv?download=1",
-}
+# Zenodo VarroaDataset file URLs (CC-BY-4.0). Two endpoints exist and Zenodo
+# 403s one or the other depending on the caller's IP/rate, so we try both.
+ZENODO_FILES = ("train.zip", "val.zip", "test.zip", "gt.csv")
+
+
+def _zenodo_urls(name: str) -> List[str]:
+    """Return both Zenodo download endpoints for a file (fallback order)."""
+    return [
+        f"https://zenodo.org/records/4085044/files/{name}?download=1",
+        f"https://zenodo.org/api/records/4085044/files/{name}/content",
+    ]
 
 # Default VnPollenBee Google-Drive folder (from the project page).
 VNPB_DRIVE_URL = (
@@ -268,15 +271,48 @@ def split_for(name: str, hint: str = "") -> str:
 # --------------------------------------------------------------------------- #
 # Download + extraction helpers (network; not unit-tested).
 # --------------------------------------------------------------------------- #
-def _download(url: str, dest: Path) -> None:
-    """Stream a URL to ``dest`` (skips if already present and non-empty)."""
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _download(urls, dest: Path, retries: int = 5) -> None:
+    """Stream the first working URL to ``dest`` (skips if already downloaded).
+
+    ``urls`` may be a single URL or a list of fallbacks. Each is retried with
+    exponential backoff on 403/429/5xx (Zenodo rate-limits programmatic
+    access from shared IPs like Colab's).
+    """
+    import time
+
     if dest.is_file() and dest.stat().st_size > 0:
         logger.info("exists, skip download: %s", dest.name)
         return
-    logger.info("downloading %s -> %s", url, dest)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=600) as resp, open(dest, "wb") as fh:
-        shutil.copyfileobj(resp, fh)
+    if isinstance(urls, str):
+        urls = [urls]
+
+    last_err: Optional[Exception] = None
+    for attempt in range(retries):
+        url = urls[min(attempt, len(urls) - 1)]  # cycle through fallbacks
+        try:
+            logger.info("downloading %s -> %s (attempt %d)", url, dest.name, attempt + 1)
+            req = urllib.request.Request(url, headers=_BROWSER_HEADERS)
+            tmp = dest.with_suffix(dest.suffix + ".part")
+            with urllib.request.urlopen(req, timeout=600) as resp, open(tmp, "wb") as fh:
+                shutil.copyfileobj(resp, fh)
+            tmp.replace(dest)
+            return
+        except Exception as exc:  # noqa: BLE001 - retry on any transient failure
+            last_err = exc
+            wait = 3 * (2 ** attempt)
+            logger.warning("download failed (%s); retrying in %ds", exc, wait)
+            time.sleep(wait)
+    raise RuntimeError(f"failed to download {dest.name} after {retries} tries: {last_err}")
 
 
 def _safe_extract(zip_path: Path, dest: Path) -> None:
@@ -415,8 +451,8 @@ def prepare_varroa(
     varroa_dir = raw_dir / "varroa"
     varroa_dir.mkdir(parents=True, exist_ok=True)
 
-    for fname, url in VARROA_FILES.items():
-        _download(url, varroa_dir / fname)
+    for fname in ZENODO_FILES:
+        _download(_zenodo_urls(fname), varroa_dir / fname)
     for zname in ("train.zip", "val.zip", "test.zip"):
         marker = varroa_dir / (zname[:-4] + "_extracted")
         if marker.exists():

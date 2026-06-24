@@ -54,12 +54,12 @@ logger = logging.getLogger(__name__)
 CANONICAL: Dict[str, int] = {"bee": 0, "pollen_bee": 1, "varroa_bee": 2}
 
 # Zenodo VarroaDataset direct file URLs (CC-BY-4.0).
-ZENODO_BASE = "https://zenodo.org/api/records/4085044/files"
+ZENODO_BASE = "https://zenodo.org/records/4085044/files"
 VARROA_FILES = {
-    "train.zip": f"{ZENODO_BASE}/train.zip/content",
-    "val.zip": f"{ZENODO_BASE}/val.zip/content",
-    "test.zip": f"{ZENODO_BASE}/test.zip/content",
-    "gt.csv": f"{ZENODO_BASE}/gt.csv/content",
+    "train.zip": f"{ZENODO_BASE}/train.zip?download=1",
+    "val.zip": f"{ZENODO_BASE}/val.zip?download=1",
+    "test.zip": f"{ZENODO_BASE}/test.zip?download=1",
+    "gt.csv": f"{ZENODO_BASE}/gt.csv?download=1",
 }
 
 # Default VnPollenBee Google-Drive folder (from the project page).

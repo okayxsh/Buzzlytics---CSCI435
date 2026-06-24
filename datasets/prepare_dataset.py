@@ -357,45 +357,47 @@ def prepare_vnpollenbee(
         )
 
     count = 0
+    skipped = 0
     for js in sorted(vpb_dir.rglob("*.json")):
         try:
             doc = json.loads(js.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("skipping unreadable json %s: %s", js.name, exc)
-            continue
-        img_w = int(doc.get("imageWidth") or 0)
-        img_h = int(doc.get("imageHeight") or 0)
-        shapes = doc.get("shapes", [])
-        if not img_w or not img_h or not shapes:
-            continue
+            img_w = int(doc.get("imageWidth") or 0)
+            img_h = int(doc.get("imageHeight") or 0)
+            shapes = doc.get("shapes", [])
+            if not img_w or not img_h or not shapes:
+                skipped += 1
+                continue
 
-        # Image: prefer embedded base64, else a sibling file by imagePath.
-        img_bytes: Optional[bytes] = None
-        ext = ".jpg"
-        data = doc.get("imageData")
-        if data:
-            try:
-                img_bytes = base64.b64decode(data)
-            except Exception:  # noqa: BLE001
-                img_bytes = None
-        if img_bytes is None:
-            ip = doc.get("imagePath")
-            if ip:
-                cand = (js.parent / ip).resolve()
-                if cand.is_file():
-                    img_bytes = cand.read_bytes()
-                    ext = cand.suffix or ".jpg"
-        if img_bytes is None:
-            logger.warning("no image for %s — skipping", js.name)
-            continue
+            # Image: prefer embedded base64, else a sibling file by imagePath.
+            img_bytes: Optional[bytes] = None
+            ext = ".jpg"
+            data = doc.get("imageData")
+            if data:
+                try:
+                    img_bytes = base64.b64decode(data)
+                except Exception:  # noqa: BLE001
+                    img_bytes = None
+            if img_bytes is None:
+                ip = doc.get("imagePath")
+                if ip:
+                    cand = (js.parent / ip).resolve()
+                    if cand.is_file():
+                        img_bytes = cand.read_bytes()
+                        ext = cand.suffix or ".jpg"
+            if img_bytes is None:
+                skipped += 1
+                continue
 
-        labels = labelme_shapes_to_yolo(shapes, img_w, img_h)
-        rel = str(js.relative_to(vpb_dir))
-        stem = "vpb_" + _safe_stem(js.stem)
-        split = split_for(stem, hint=rel)
-        _write_pair(out_dir, split, stem, img_bytes, ext, labels)
-        count += 1
-    logger.info("VnPollenBee: wrote %d images", count)
+            labels = labelme_shapes_to_yolo(shapes, img_w, img_h)
+            rel = str(js.relative_to(vpb_dir))
+            stem = "vpb_" + _safe_stem(js.stem)
+            split = split_for(stem, hint=rel)
+            _write_pair(out_dir, split, stem, img_bytes, ext, labels)
+            count += 1
+        except Exception as exc:  # noqa: BLE001 - never let one bad file abort the build
+            logger.warning("skipping %s: %s", js.name, exc)
+            skipped += 1
+    logger.info("VnPollenBee: wrote %d images (skipped %d)", count, skipped)
     return count
 
 

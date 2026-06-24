@@ -24,7 +24,7 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 
 - **Video Upload Processing**: Upload pre-recorded hive videos for batch analysis with annotated output and health reports
 - **Live Webcam Streaming**: Real-time bee monitoring via WebSocket-based frame streaming with instant annotations
-- **4-Class Bee Detection**: Detects bees, pollen-carrying bees, varroa-infected bees, and wasps (entrance pest/robbing threat)
+- **3-Class Bee Detection**: Detects bees, pollen-carrying bees, and varroa-infected bees
 - **Multi-Object Tracking**: ByteTrack-based persistent identity tracking across video frames
 - **Health Score Engine**: Algorithmic hive health scoring (0-100) with clinical status classification
 - **Real-Time Analytics Dashboard**: Live metrics panel with counts, rates, and trend indicators
@@ -73,7 +73,7 @@ The system integrates the following four computer vision capabilities:
 | # | Capability | Implementation | Module |
 |---|-----------|---------------|--------|
 | 1 | **Image Enhancement** | CLAHE (Contrast Limited Adaptive Histogram Equalization) in LAB color space + Non-Local Means denoising | `cv_pipeline/preprocess.py` |
-| 2 | **Object Detection** | Fine-tuned YOLOv8 with 4 bee classes | `cv_pipeline/detector.py` |
+| 2 | **Object Detection** | Fine-tuned YOLOv8 with 3 bee classes | `cv_pipeline/detector.py` |
 | 3 | **Object Tracking** | ByteTrack multi-object tracker via ultralytics | `cv_pipeline/tracker.py` |
 | 4 | **Video Processing** | Full video pipeline with frame-by-frame processing, moving object tracking, and health analytics | `cv_pipeline/pipeline.py` |
 
@@ -81,7 +81,6 @@ The system integrates the following four computer vision capabilities:
 - `bee` (0): Healthy forager bees
 - `pollen_bee` (1): Bees carrying pollen loads
 - `varroa_bee` (2): Bees showing varroa mite infestation signs
-- `wasp` (3): Wasps at hive entrance (signals robbing/predation risk)
 
 ---
 
@@ -225,7 +224,7 @@ buzzlytics/
 ├── cv_pipeline/                  # Core Computer Vision Processing Module
 │   ├── pipeline.py               # Central orchestration script execution pipeline
 │   ├── preprocess.py             # Shadow balancing & illumination fixes (CLAHE)
-│   ├── detector.py               # Custom fine-tuned 4-class YOLOv8 object detector
+│   ├── detector.py               # Custom fine-tuned 3-class YOLOv8 object detector
 │   ├── tracker.py                # Multi-object temporal identity tracker (ByteTrack)
 │   ├── analytics.py              # Statistical aggregation, tracking lines, and thresholds
 │   └── visualize.py              # Frame matrix annotation and box overlay engine
@@ -254,12 +253,22 @@ buzzlytics/
 
 ### Preparing the Dataset
 
-1. Collect images of beehive entrances showing bees in various states
-2. Label images using a tool like [Roboflow](https://roboflow.com), [Label Studio](https://labelstudio.io), or [CVAT](https://www.cvat.ai)
-3. Export labels in YOLO format (one `.txt` file per image with class_id, x_center, y_center, width, height)
-4. Place images in `datasets/images/train/` and `datasets/images/val/`
-5. Place labels in `datasets/labels/train/` and `datasets/labels/va/`
-6. The dataset config is already at `datasets/data/bee_dataset.yaml`
+The dataset is built automatically from two public research datasets (no API key needed):
+
+- **VnPollenBee** ([HUST ComVis](https://comvis-hust.github.io/datasets/pollenbee.html)) — hive-entrance
+  detection set, LabelMe polygons. `nonpollenbee` → `bee`, `pollenbee` → `pollen_bee`.
+- **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) — 13.5k
+  varroa crops + `gt.csv`. Each crop becomes one whole-image box: `varroa_bee` (infected) or `bee` (healthy).
+
+Run the builder (downloads ~1.5 GB into `datasets/raw/`, writes `datasets/data/{train,valid,test}`):
+
+```bash
+python datasets/prepare_dataset.py
+```
+
+The dataset config is written to `datasets/data/bee_dataset.yaml`. The easiest path is to run the
+Colab notebook `training/colab_train.ipynb`, which clones this repo, runs the builder, caches the
+prepared dataset to your Google Drive, and trains — all in one shot.
 
 ### Label Format (YOLO)
 
@@ -273,7 +282,6 @@ All values are normalized to [0, 1]. Class IDs:
 - `0` = bee
 - `1` = pollen_bee
 - `2` = varroa_bee
-- `3` = wasp
 
 ### Training
 

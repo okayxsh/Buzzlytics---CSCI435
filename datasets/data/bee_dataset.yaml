@@ -4,9 +4,8 @@ train: train/images
 val: valid/images
 test: test/images
 
-nc: 4
+nc: 3
 names:
   0: bee
   1: pollen_bee
   2: varroa_bee
-  3: wasp

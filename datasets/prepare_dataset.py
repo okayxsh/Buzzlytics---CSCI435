@@ -310,30 +310,51 @@ def _write_pair(
 # --------------------------------------------------------------------------- #
 # Source 1: VnPollenBee (Google-Drive LabelMe JSON folder).
 # --------------------------------------------------------------------------- #
-def prepare_vnpollenbee(drive_url: str, raw_dir: Path, out_dir: Path) -> int:
-    """Download + convert VnPollenBee LabelMe JSONs to YOLO. Returns #images."""
-    try:
-        import gdown  # type: ignore
-    except ImportError:  # pragma: no cover - convenience install
-        import subprocess
-        import sys
+def prepare_vnpollenbee(
+    drive_url: str,
+    raw_dir: Path,
+    out_dir: Path,
+    local_dir: Optional[str] = None,
+) -> int:
+    """Convert VnPollenBee LabelMe JSONs to YOLO. Returns #images.
 
-        logger.info("installing gdown ...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "gdown"])
-        import gdown  # type: ignore
+    If ``local_dir`` is given (a folder of already-downloaded ``*.json``),
+    it is used directly — this is the reliable path, since the source Drive
+    folder has >50 files per subfolder and gdown's scraper cannot traverse
+    it (Google caps folder listings at 50). The Colab notebook downloads the
+    JSONs via the real Drive API and passes them here.
 
-    vpb_dir = raw_dir / "vnpollenbee"
-    vpb_dir.mkdir(parents=True, exist_ok=True)
-    logger.info("downloading VnPollenBee Drive folder (LabelMe JSON) ...")
-    # remaining_ok=True lifts gdown's default 50-file cap (the folder has
-    # hundreds of JSONs); without it gdown stops at 50 / errors.
-    gdown.download_folder(
-        url=drive_url,
-        output=str(vpb_dir),
-        quiet=False,
-        use_cookies=False,
-        remaining_ok=True,
-    )
+    Without ``local_dir`` it falls back to ``gdown.download_folder`` (only
+    works for small folders — kept for convenience/local use).
+    """
+    if local_dir:
+        vpb_dir = Path(local_dir)
+        if not vpb_dir.is_dir():
+            raise FileNotFoundError(f"--vnpollenbee-dir not found: {vpb_dir}")
+        logger.info("using pre-downloaded VnPollenBee dir: %s", vpb_dir)
+    else:
+        try:
+            import gdown  # type: ignore
+        except ImportError:  # pragma: no cover - convenience install
+            import subprocess
+            import sys
+
+            logger.info("installing gdown ...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "gdown"])
+            import gdown  # type: ignore
+
+        vpb_dir = raw_dir / "vnpollenbee"
+        vpb_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("downloading VnPollenBee Drive folder (LabelMe JSON) ...")
+        # NOTE: gdown raises FolderContentsMaximumLimitError on folders with
+        # >50 files. For the real dataset use --vnpollenbee-dir instead.
+        gdown.download_folder(
+            url=drive_url,
+            output=str(vpb_dir),
+            quiet=False,
+            use_cookies=False,
+            remaining_ok=True,
+        )
 
     count = 0
     for js in sorted(vpb_dir.rglob("*.json")):
@@ -472,6 +493,12 @@ def main() -> None:
     parser.add_argument("--out-dir", default="datasets/data")
     parser.add_argument("--vnpollenbee-url", default=VNPB_DRIVE_URL)
     parser.add_argument(
+        "--vnpollenbee-dir",
+        default=None,
+        help="Folder of pre-downloaded VnPollenBee *.json (skips gdown). "
+        "Use this on Colab — the Drive folder has >50 files/subfolder.",
+    )
+    parser.add_argument(
         "--skip-varroa", action="store_true", help="Skip the Zenodo varroa set"
     )
     parser.add_argument(
@@ -492,7 +519,9 @@ def main() -> None:
 
     total = 0
     if not args.skip_vnpollenbee:
-        total += prepare_vnpollenbee(args.vnpollenbee_url, raw_dir, out_dir)
+        total += prepare_vnpollenbee(
+            args.vnpollenbee_url, raw_dir, out_dir, local_dir=args.vnpollenbee_dir
+        )
     if not args.skip_varroa:
         total += prepare_varroa(raw_dir, out_dir, limit=args.varroa_limit)
 

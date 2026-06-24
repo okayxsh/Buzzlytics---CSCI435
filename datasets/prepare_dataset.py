@@ -325,8 +325,14 @@ def prepare_vnpollenbee(drive_url: str, raw_dir: Path, out_dir: Path) -> int:
     vpb_dir = raw_dir / "vnpollenbee"
     vpb_dir.mkdir(parents=True, exist_ok=True)
     logger.info("downloading VnPollenBee Drive folder (LabelMe JSON) ...")
+    # remaining_ok=True lifts gdown's default 50-file cap (the folder has
+    # hundreds of JSONs); without it gdown stops at 50 / errors.
     gdown.download_folder(
-        url=drive_url, output=str(vpb_dir), quiet=False, use_cookies=False
+        url=drive_url,
+        output=str(vpb_dir),
+        quiet=False,
+        use_cookies=False,
+        remaining_ok=True,
     )
 
     count = 0

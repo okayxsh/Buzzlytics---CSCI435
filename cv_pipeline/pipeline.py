@@ -199,9 +199,11 @@ class CVPipeline:
         self.analytics.update(tracks if tracks else detections)
         summary = self.analytics.get_summary()
 
-        # Step 4: Visualize
+        # Step 4: Visualize on the RAW frame (not the CLAHE-preprocessed one)
+        # so the output video keeps natural colour and skipped frames don't
+        # flicker in brightness.
         annotated = self.visualizer.annotate_frame(
-            frame=processed,
+            frame=frame,
             tracks=tracks if tracks else None,
             detections=detections if detections else None,
             track_histories=track_histories,
@@ -322,16 +324,23 @@ class CVPipeline:
                 if not ret:
                     break
 
-                # frame_skip: only process every Nth frame
-                if self._frame_skip > 1 and frame_number % self._frame_skip != 0:
-                    # Reuse the previous frame's result
-                    if last_result is not None:
-                        result = last_result
-                    else:
-                        # Edge case: haven't processed even one frame yet;
-                        # force process this frame to seed last_result
-                        result = self.process_frame(frame)
-                        last_result = result
+                # frame_skip: only run inference on every Nth frame, BUT still
+                # emit every frame so the output video stays smooth. On skipped
+                # frames we redraw the last-known boxes onto the *current* frame
+                # (cheap, no inference) instead of repeating the old frame —
+                # otherwise motion freezes for N frames and looks choppy.
+                if (
+                    self._frame_skip > 1
+                    and frame_number % self._frame_skip != 0
+                    and last_result is not None
+                ):
+                    annotated = self.visualizer.annotate_frame(
+                        frame=frame,
+                        tracks=last_result["tracks"] or None,
+                        detections=last_result["detections"] or None,
+                        summary=last_result["summary"],
+                    )
+                    result = {**last_result, "annotated_frame": annotated}
                 else:
                     result = self.process_frame(frame)
                     last_result = result

@@ -24,7 +24,7 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 
 - **Video Upload Processing**: Upload pre-recorded hive videos for batch analysis with annotated output and health reports
 - **Live Webcam Streaming**: Real-time bee monitoring via WebSocket-based frame streaming with instant annotations
-- **3-Class Bee Detection**: Detects bees, pollen-carrying bees, and varroa-infected bees
+- **Two-Stage Bee Analysis**: A YOLOv8 detector boxes every bee as bee/pollen-carrying; a second classifier marks each detected bee as varroa-infected or healthy
 - **Multi-Object Tracking**: ByteTrack-based persistent identity tracking across video frames
 - **Health Score Engine**: Algorithmic hive health scoring (0-100) with clinical status classification
 - **Real-Time Analytics Dashboard**: Live metrics panel with counts, rates, and trend indicators
@@ -77,10 +77,14 @@ The system integrates the following four computer vision capabilities:
 | 3 | **Object Tracking** | ByteTrack multi-object tracker via ultralytics | `cv_pipeline/tracker.py` |
 | 4 | **Video Processing** | Full video pipeline with frame-by-frame processing, moving object tracking, and health analytics | `cv_pipeline/pipeline.py` |
 
-**Detection Classes:**
-- `bee` (0): Healthy forager bees
-- `pollen_bee` (1): Bees carrying pollen loads
-- `varroa_bee` (2): Bees showing varroa mite infestation signs
+**Two-stage taxonomy:**
+- Stage 1 — detector (boxes every bee): `bee` (0), `pollen_bee` (1)
+- Stage 2 — per-bee classifier on each detected bee crop: `healthy` / `varroa`
+- A bee classified `varroa` is relabeled `varroa_bee` at runtime, which analytics/visualize count and color.
+
+Why two stages: the varroa mite is tiny and only annotated as single-bee classification crops
+(VarroaDataset), not boxed bees-in-scene — so forcing it into detection ruins per-bee localization.
+This detect-then-classify design follows IntelliBeeHive / BeeAlarmed.
 
 ---
 
@@ -224,7 +228,7 @@ buzzlytics/
 ├── cv_pipeline/                  # Core Computer Vision Processing Module
 │   ├── pipeline.py               # Central orchestration script execution pipeline
 │   ├── preprocess.py             # Shadow balancing & illumination fixes (CLAHE)
-│   ├── detector.py               # Custom fine-tuned 3-class YOLOv8 object detector
+│   ├── detector.py               # Stage-1 2-class YOLOv8 detector (bee, pollen_bee)
 │   ├── tracker.py                # Multi-object temporal identity tracker (ByteTrack)
 │   ├── analytics.py              # Statistical aggregation, tracking lines, and thresholds
 │   └── visualize.py              # Frame matrix annotation and box overlay engine
@@ -253,22 +257,21 @@ buzzlytics/
 
 ### Preparing the Dataset
 
-The dataset is built automatically from two public research datasets (no API key needed):
+The builder produces **two** datasets from two public sources (no API key needed):
 
-- **VnPollenBee** ([HUST ComVis](https://comvis-hust.github.io/datasets/pollenbee.html)) — hive-entrance
-  detection set, LabelMe polygons. `nonpollenbee` → `bee`, `pollenbee` → `pollen_bee`.
-- **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) — 13.5k
-  varroa crops + `gt.csv`. Each crop becomes one whole-image box: `varroa_bee` (infected) or `bee` (healthy).
-
-Run the builder (downloads ~1.5 GB into `datasets/raw/`, writes `datasets/data/{train,valid,test}`):
+- **Detection** (stage 1) from **VnPollenBee** ([HUST ComVis](https://comvis-hust.github.io/datasets/pollenbee.html)) —
+  LabelMe polygons → `datasets/data/{train,valid,test}`. `nonpollenbee` → `bee`, `pollenbee` → `pollen_bee`.
+- **Varroa classification** (stage 2) from **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) —
+  single-bee crops sorted into `datasets/varroa_cls/{train,val,test}/{healthy,varroa}/`.
 
 ```bash
-python datasets/prepare_dataset.py
+python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
 ```
 
-The dataset config is written to `datasets/data/bee_dataset.yaml`. The easiest path is to run the
-Colab notebook `training/colab_train.ipynb`, which clones this repo, runs the builder, caches the
-prepared dataset to your Google Drive, and trains — all in one shot.
+The detection config is written to `datasets/data/bee_dataset.yaml`. The end-to-end path:
+run `training/build_dataset_colab.ipynb` once (builds both zips into your Drive), then
+`training/colab_train.ipynb` (detector) and `training/colab_train_varroa_cls.ipynb` (varroa classifier).
+Drop `best.pt` → `cv_pipeline/weights/best.pt` and `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`.
 
 ### Label Format (YOLO)
 
@@ -278,10 +281,11 @@ Each `.txt` label file should contain one line per object:
 class_id x_center y_center width height
 ```
 
-All values are normalized to [0, 1]. Class IDs:
+All values are normalized to [0, 1]. Detection class IDs:
 - `0` = bee
 - `1` = pollen_bee
-- `2` = varroa_bee
+
+(Varroa is not a detection label — the stage-2 classifier sorts crops into `healthy`/`varroa` folders.)
 
 ### Training
 

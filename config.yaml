@@ -3,7 +3,15 @@ detector:
   model_path: cv_pipeline/weights/best.pt
   conf_threshold: 0.25
   iou_threshold: 0.45
-  imgsz: 640
+  imgsz: 416
+
+# Stage-2 per-bee varroa classifier (healthy vs varroa). Runs on each
+# detected bee crop and upgrades its label to varroa_bee when infected.
+# Inert if the weights file is missing (detection still works).
+varroa_classifier:
+  enabled: true
+  model_path: cv_pipeline/weights/varroa_cls.pt
+  conf_threshold: 0.5
 
 tracker:
   track_buffer: 30
@@ -35,9 +43,9 @@ motion:
   kernel_size: 3
 
 video:
-  frame_skip: 2
+  frame_skip: 5
 
 preprocess:
   white_balance: true
   clahe_clip_limit: 2.0
-  denoise_strength: 10
+  denoise_strength: 0   # NLM denoise costs ~4s/frame at 1080p; off for speed

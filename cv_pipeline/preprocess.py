@@ -195,9 +195,12 @@ def preprocess_frame(
         apply_white_balance(frame) if white_balance else frame
     )
 
-    # Step 1: Denoise to remove sensor noise
-    denoised: NDArray[np.uint8] = denoise(
-        current, strength=denoise_strength
+    # Step 1: Denoise to remove sensor noise. Non-Local Means is very
+    # expensive (~4s/frame at 1080p), so strength <= 0 skips it entirely.
+    denoised: NDArray[np.uint8] = (
+        denoise(current, strength=denoise_strength)
+        if denoise_strength and denoise_strength > 0
+        else current
     )
 
     # Step 2: Apply CLAHE for illumination correction

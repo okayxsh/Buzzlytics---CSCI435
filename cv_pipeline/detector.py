@@ -1,8 +1,9 @@
 """
 YOLOv8-based object detector for the Buzzlytics CV Pipeline.
 
-Detects four bee-related classes in beehive monitoring footage:
-bee, pollen_bee, varroa_bee, and wasp.
+Stage 1 of the two-stage design: boxes every bee as ``bee`` or
+``pollen_bee``. Varroa is decided per-bee afterwards by the stage-2
+VarroaClassifier (which may relabel a box ``varroa_bee`` at runtime).
 """
 
 from __future__ import annotations
@@ -18,12 +19,11 @@ from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
 
-# Class ID to class name mapping for the bee detection model
+# Class ID to class name mapping for the 2-class detection model.
+# (varroa_bee is NOT a detection class — the stage-2 classifier assigns it.)
 BEE_CLASS_NAMES: Dict[int, str] = {
     0: "bee",
     1: "pollen_bee",
-    2: "varroa_bee",
-    3: "wasp",
 }
 
 

@@ -81,7 +81,7 @@ export default function UploadVideo({ onUploadStart, onUploadComplete, onUploadE
     onUploadStart?.();
 
     const formData = new FormData();
-    formData.append('video', file);
+    formData.append('file', file);
 
     try {
       const response = await videoApi.upload(formData, (progressEvent) => {

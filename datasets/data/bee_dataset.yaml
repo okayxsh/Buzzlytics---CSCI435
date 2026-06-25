@@ -1,11 +1,11 @@
-# Buzzlytics Bee Detection Dataset Configuration (YOLOv8)
+# Buzzlytics Detection Dataset Configuration (YOLOv8, stage 1)
+# 2-class: varroa is handled per-bee by the stage-2 classifier, not detected.
 path: ../datasets/data
 train: train/images
 val: valid/images
 test: test/images
 
-nc: 3
+nc: 2
 names:
   0: bee
   1: pollen_bee
-  2: varroa_bee

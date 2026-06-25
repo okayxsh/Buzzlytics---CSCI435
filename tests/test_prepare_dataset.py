@@ -4,8 +4,7 @@ from datasets.prepare_dataset import (
     build_id_map,
     points_to_yolo_box,
     labelme_shapes_to_yolo,
-    varroa_flag_to_class,
-    whole_image_label,
+    varroa_flag_to_label,
     parse_varroa_gt_line,
     sample_varroa_rows,
     split_for,
@@ -67,26 +66,22 @@ def test_labelme_shapes_maps_pollen_and_drops_unknown():
     assert out[1].startswith("1 ")  # pollenbee -> pollen_bee
 
 
-# --- VarroaDataset gt.csv -> whole-crop box --------------------------------- #
-def test_varroa_flag_to_class():
-    assert varroa_flag_to_class(1) == 2  # infected -> varroa_bee
-    assert varroa_flag_to_class(3) == 2  # infected (quality-code 3) -> varroa_bee
-    assert varroa_flag_to_class(0) == 0  # healthy -> bee
-
-
-def test_whole_image_label():
-    assert whole_image_label(2) == "2 0.5 0.5 1.0 1.0\n"
+# --- VarroaDataset gt.csv -> classification label --------------------------- #
+def test_varroa_flag_to_label():
+    assert varroa_flag_to_label(1) == "varroa"  # infected
+    assert varroa_flag_to_label(3) == "varroa"  # infected (quality-code 3)
+    assert varroa_flag_to_label(0) == "healthy"  # healthy
 
 
 def test_parse_varroa_gt_line_infected_with_mite_boxes():
     line = "test/videos/x/foo.png 1 84 143 109 172 54 142 82 172"
-    assert parse_varroa_gt_line(line) == ("test/videos/x/foo.png", 2)
+    assert parse_varroa_gt_line(line) == ("test/videos/x/foo.png", "varroa")
 
 
 def test_parse_varroa_gt_line_healthy():
     assert parse_varroa_gt_line("train/videos/y/bar.png 0") == (
         "train/videos/y/bar.png",
-        0,
+        "healthy",
     )
 
 
@@ -109,8 +104,10 @@ def test_split_is_deterministic_and_valid():
 
 # --- varroa subsampling ----------------------------------------------------- #
 def _varroa_rows():
-    # 24 healthy (bee=0), 6 infected (varroa=2)  -> ratio 4:1
-    return [(f"h/{i}.png", 0) for i in range(24)] + [(f"v/{i}.png", 2) for i in range(6)]
+    # 24 healthy, 6 varroa  -> ratio 4:1
+    return [(f"h/{i}.png", "healthy") for i in range(24)] + [
+        (f"v/{i}.png", "varroa") for i in range(6)
+    ]
 
 
 def test_sample_varroa_none_returns_all():
@@ -123,9 +120,9 @@ def test_sample_varroa_caps_and_preserves_ratio():
     rows = _varroa_rows()  # 30 total, 4:1
     kept = sample_varroa_rows(rows, 10)
     assert len(kept) <= 10
-    healthy = sum(1 for _, c in kept if c == 0)
-    infected = sum(1 for _, c in kept if c == 2)
-    # ~8 healthy : ~2 infected
+    healthy = sum(1 for _, c in kept if c == "healthy")
+    infected = sum(1 for _, c in kept if c == "varroa")
+    # ~8 healthy : ~2 varroa
     assert healthy == 8 and infected == 2
 
 

@@ -1,27 +1,31 @@
 """
-Build the unified 3-class YOLOv8 detection dataset for Buzzlytics from two
-public research datasets, replacing the old Roboflow sources.
+Build TWO-STAGE data for Buzzlytics from two public research datasets.
 
-Unified classes: 0=bee, 1=pollen_bee, 2=varroa_bee.  (wasp dropped.)
+Stage 1 — DETECTION (boxes every bee): classes 0=bee, 1=pollen_bee.
+Stage 2 — CLASSIFICATION (per-bee varroa): labels healthy / varroa.
+
+Why two stages: VarroaDataset is single-bee CROPS (classification), not
+boxed bees-in-scene. Forcing it into detection as whole-image boxes ruins
+per-bee localisation and poisons the bee class. So varroa is a per-bee
+attribute decided by a classifier on each detected bee crop, the way
+IntelliBeeHive / BeeAlarmed do it.
 
 Sources
 -------
-1. VnPollenBee (HUST ComVis) — real hive-entrance detection set.
+1. VnPollenBee (HUST ComVis) — real hive-entrance DETECTION set.
    LabelMe JSON (polygons) with embedded base64 ``imageData``.
    labels: ``nonpollenbee`` -> bee (0), ``pollenbee`` -> pollen_bee (1).
-   https://comvis-hust.github.io/datasets/pollenbee.html
-   (Google Drive folder).
+   https://comvis-hust.github.io/datasets/pollenbee.html  (Google-Drive folder)
 
-2. VarroaDataset (TU Wien, Zenodo 4085044) — varroa parasite set.
-   160x280 single-bee CROPS + ``gt.csv`` (classification, no bee boxes).
-   gt.csv line:  ``<crop_path> <flag> [mite_x1 y1 x2 y2 ...]``
-   flag 1 = infected, 0 = healthy.  We follow the "whole-crop box"
-   approach: each crop becomes ONE full-image YOLO box, class
-   varroa_bee (2) if infected else bee (0).  The mite sub-boxes are
-   ignored (they mark the parasite, not the bee).
+2. VarroaDataset (TU Wien, Zenodo 4085044) — varroa CLASSIFICATION set.
+   160x280 single-bee crops + ``gt.csv`` (``<path> <flag> [mite boxes]``).
+   flag 0 = healthy, non-zero = infected. Crops are sorted into a YOLOv8
+   classification ImageFolder: ``{split}/{healthy|varroa}/``.
    https://zenodo.org/records/4085044
 
-Output: datasets/data/{train,valid,test}/{images,labels}.
+Output:
+    datasets/data/{train,valid,test}/{images,labels}   (detection, 2-class)
+    datasets/varroa_cls/{train,val,test}/{healthy,varroa}/   (classification)
 
 Usage
 -----
@@ -50,8 +54,14 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# Unified (canonical) class ids — wasp intentionally dropped.
-CANONICAL: Dict[str, int] = {"bee": 0, "pollen_bee": 1, "varroa_bee": 2}
+# DETECTION class ids (stage 1). Only bee + pollen_bee get bounding boxes,
+# from VnPollenBee. Varroa is NOT a detection class — it is decided per-bee
+# by the stage-2 classifier (see VARROA_CLASSES), because VarroaDataset is a
+# classification set (single-bee crops), not boxed bees-in-scene.
+CANONICAL: Dict[str, int] = {"bee": 0, "pollen_bee": 1}
+
+# CLASSIFICATION labels (stage 2) for the varroa crop classifier.
+VARROA_CLASSES = ("healthy", "varroa")
 
 # Zenodo VarroaDataset file URLs (CC-BY-4.0). Two endpoints exist and Zenodo
 # 403s one or the other depending on the caller's IP/rate, so we try both.
@@ -188,19 +198,14 @@ def labelme_shapes_to_yolo(
     return out
 
 
-def varroa_flag_to_class(flag: int, canonical: Dict[str, int] = CANONICAL) -> int:
-    """Map a VarroaDataset gt flag to a class id.
+def varroa_flag_to_label(flag: int) -> str:
+    """Map a VarroaDataset gt flag to a classification label.
 
     The gt.csv first field is 0 for healthy and NON-ZERO (observed 1 or 3,
     an annotation-quality code) for varroa-infected — verified against the
     dataset's published 9562 healthy / 3947 infected counts.
     """
-    return canonical["varroa_bee"] if int(flag) != 0 else canonical["bee"]
-
-
-def whole_image_label(class_id: int) -> str:
-    """Build a single full-image YOLO box for a pre-cropped single-bee image."""
-    return f"{class_id} 0.5 0.5 1.0 1.0\n"
+    return "varroa" if int(flag) != 0 else "healthy"
 
 
 def sample_varroa_rows(
@@ -234,17 +239,18 @@ def sample_varroa_rows(
     return out
 
 
-def parse_varroa_gt_line(line: str) -> Optional[Tuple[str, int]]:
-    """Parse one ``gt.csv`` line into ``(crop_path, class_id)``.
+def parse_varroa_gt_line(line: str) -> Optional[Tuple[str, str]]:
+    """Parse one ``gt.csv`` line into ``(crop_path, label)``.
 
-    Line form: ``<path> <flag> [mite boxes...]``. Returns ``None`` for blanks.
+    Line form: ``<path> <flag> [mite boxes...]``. ``label`` is
+    "healthy"/"varroa". Returns ``None`` for blanks.
     """
     parts = line.split()
     if not parts:
         return None
     path = parts[0]
     flag = int(parts[1]) if len(parts) > 1 and parts[1].lstrip("-").isdigit() else 0
-    return path, varroa_flag_to_class(flag)
+    return path, varroa_flag_to_label(flag)
 
 
 def split_for(name: str, hint: str = "") -> str:
@@ -441,12 +447,16 @@ def prepare_vnpollenbee(
 # Source 2: VarroaDataset (Zenodo crops + gt.csv).
 # --------------------------------------------------------------------------- #
 def prepare_varroa(
-    raw_dir: Path, out_dir: Path, limit: Optional[int] = None
+    raw_dir: Path, cls_out_dir: Path, limit: Optional[int] = None
 ) -> int:
-    """Download + convert VarroaDataset crops to whole-box YOLO. Returns #images.
+    """Download VarroaDataset crops into a YOLOv8 classification ImageFolder.
 
-    ``limit`` caps the number of varroa crops kept (class-stratified,
-    deterministic); ``None`` keeps all 13.5k.
+    Stage-2 classifier data. Each single-bee crop is copied to
+    ``cls_out_dir/{split}/{healthy|varroa}/`` (NO bounding boxes — these are
+    classification crops, not boxed bees). Split comes from the gt.csv path
+    prefix (train/val/test). Returns #crops written.
+
+    ``limit`` caps crops kept (class-stratified, deterministic); ``None`` = all.
     """
     varroa_dir = raw_dir / "varroa"
     varroa_dir.mkdir(parents=True, exist_ok=True)
@@ -470,8 +480,8 @@ def prepare_varroa(
             by_rel[rel] = p
             by_base.setdefault(p.name, p)
 
-    # Pass 1: collect resolvable (path, class) rows.
-    rows: List[Tuple[str, int]] = []
+    # Pass 1: collect resolvable (path, label) rows.
+    rows: List[Tuple[str, str]] = []
     for line in (varroa_dir / "gt.csv").read_text(encoding="utf-8").splitlines():
         parsed = parse_varroa_gt_line(line)
         if parsed is None:
@@ -480,20 +490,21 @@ def prepare_varroa(
         if by_rel.get(rel_norm) or by_base.get(Path(rel_norm).name):
             rows.append((rel_norm, parsed[1]))
 
-    # Pass 2: optional subsample, then write.
+    # Pass 2: optional subsample, then write into ImageFolder structure.
     kept = sample_varroa_rows(rows, limit)
     logger.info("VarroaDataset: keeping %d of %d resolvable crops", len(kept), len(rows))
     count = 0
-    for rel_norm, cls in kept:
+    for rel_norm, label in kept:
         img = by_rel.get(rel_norm) or by_base.get(Path(rel_norm).name)
-        split = split_for(rel_norm, hint=rel_norm)  # train/val/test prefix
-        stem = "varroa_" + _safe_stem(rel_norm)
-        _write_pair(
-            out_dir, split, stem, img.read_bytes(), img.suffix or ".png",
-            [whole_image_label(cls)],
-        )
+        # YOLOv8-cls wants train/ and val/ ; map the dataset's "test" -> test too.
+        split = split_for(rel_norm, hint=rel_norm)
+        split = "val" if split == "valid" else split
+        dest_dir = cls_out_dir / split / label
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        stem = _safe_stem(rel_norm)
+        (dest_dir / f"{stem}{img.suffix or '.png'}").write_bytes(img.read_bytes())
         count += 1
-    logger.info("VarroaDataset: wrote %d images", count)
+    logger.info("VarroaDataset (cls): wrote %d crops to %s", count, cls_out_dir)
     return count
 
 
@@ -507,7 +518,7 @@ def _safe_stem(text: str) -> str:
 
 
 def write_data_yaml(out_dir: Path) -> Path:
-    """Write the YOLO data.yaml for the unified 3-class dataset."""
+    """Write the YOLO detection data.yaml (2-class: bee, pollen_bee)."""
     cfg = {
         "path": str(out_dir.resolve()),
         "train": "train/images",
@@ -525,10 +536,18 @@ def write_data_yaml(out_dir: Path) -> Path:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(
-        description="Build the unified 3-class bee dataset (VnPollenBee + Varroa)"
+        description="Build two-stage data: detection (VnPollenBee, bee/pollen) "
+        "+ varroa classification crops (VarroaDataset)"
     )
     parser.add_argument("--raw-dir", default="datasets/raw")
-    parser.add_argument("--out-dir", default="datasets/data")
+    parser.add_argument(
+        "--out-dir", default="datasets/data",
+        help="Detection dataset out dir (bee + pollen_bee boxes).",
+    )
+    parser.add_argument(
+        "--varroa-cls-dir", default="datasets/varroa_cls",
+        help="Varroa CLASSIFICATION ImageFolder out dir (healthy/varroa crops).",
+    )
     parser.add_argument("--vnpollenbee-url", default=VNPB_DRIVE_URL)
     parser.add_argument(
         "--vnpollenbee-dir",
@@ -552,19 +571,24 @@ def main() -> None:
 
     raw_dir = Path(args.raw_dir)
     out_dir = Path(args.out_dir)
+    cls_dir = Path(args.varroa_cls_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
     _ensure_dirs(out_dir)
 
-    total = 0
+    n_det = 0
     if not args.skip_vnpollenbee:
-        total += prepare_vnpollenbee(
+        n_det = prepare_vnpollenbee(
             args.vnpollenbee_url, raw_dir, out_dir, local_dir=args.vnpollenbee_dir
         )
+    n_cls = 0
     if not args.skip_varroa:
-        total += prepare_varroa(raw_dir, out_dir, limit=args.varroa_limit)
+        n_cls = prepare_varroa(raw_dir, cls_dir, limit=args.varroa_limit)
 
     yaml_path = write_data_yaml(out_dir)
-    logger.info("Done. %d images. Unified dataset at %s (%s)", total, out_dir, yaml_path)
+    logger.info(
+        "Done. Detection: %d images -> %s (%s). Varroa-cls: %d crops -> %s",
+        n_det, out_dir, yaml_path, n_cls, cls_dir,
+    )
 
 
 if __name__ == "__main__":

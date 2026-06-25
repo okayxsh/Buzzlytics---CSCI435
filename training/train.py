@@ -1,8 +1,8 @@
 """
 Buzzlytics Model Training Script
 
-Fine-tunes a YOLOv8 model on a custom bee detection dataset with three classes:
-bee, pollen_bee, and varroa_bee.
+Fine-tunes a YOLOv8 detector (stage 1) on the 2-class bee dataset:
+bee and pollen_bee. Varroa is a separate stage-2 classifier.
 
 Usage:
     python train.py --data ../datasets/data/bee_dataset.yaml --epochs 100 --batch 16

@@ -22,6 +22,7 @@ from .detector import BeeDetector, Detection
 from .motion import MotionDetector
 from .preprocess import preprocess_frame
 from .tracker import BeeTracker, Track
+from .varroa_classifier import VarroaClassifier
 from .visualize import Visualizer
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,20 @@ class CVPipeline:
         self.analytics = AnalyticsEngine(config=cfg)
         self.visualizer = Visualizer(color_map=color_map)
         self.motion = MotionDetector(**cfg["motion"])
+
+        # Stage-2 varroa classifier (per-bee healthy/varroa). Inert if the
+        # weights are missing — detection still works.
+        vc = cfg.get("varroa_classifier", {})
+        self.varroa_classifier: Optional[VarroaClassifier] = (
+            VarroaClassifier(
+                model_path=vc.get(
+                    "model_path", "cv_pipeline/weights/varroa_cls.pt"
+                ),
+                conf_threshold=vc.get("conf_threshold", 0.5),
+            )
+            if vc.get("enabled", True)
+            else None
+        )
         pp = cfg["preprocess"]
         self._white_balance = pp["white_balance"]
         self._clahe_clip = pp["clahe_clip_limit"]
@@ -169,6 +184,14 @@ class CVPipeline:
             # Detection-only path
             detections = self.detector.detect(processed)
 
+        # Step 2c: per-bee varroa classification (stage 2). Crop each detected
+        # bee from the ORIGINAL frame and upgrade its label to "varroa_bee"
+        # when the classifier flags infection. Operates in-place on the
+        # tracks/detections so analytics + visualize pick it up unchanged.
+        if self.varroa_classifier is not None and self.varroa_classifier.available:
+            objs = tracks if tracks else detections
+            self._classify_varroa(frame, objs)
+
         # Step 3: Analyze
         # When the tracker is off (image mode), tracks is [] but detections
         # holds the raw detector output — pass those instead so analytics
@@ -195,6 +218,30 @@ class CVPipeline:
                 "blob_count": motion_result.blob_count,
             },
         }
+
+    def _classify_varroa(self, frame: NDArray[np.uint8], objs: List) -> None:
+        """Upgrade detected bees to 'varroa_bee' via the stage-2 classifier.
+
+        Crops each bee/pollen_bee box from the original frame, classifies it,
+        and mutates ``class_name`` in place when varroa is detected.
+
+        Args:
+            frame: Original BGR frame (box coords are in this frame's space).
+            objs: List of Track or Detection objects (have bbox + class_name).
+        """
+        h, w = frame.shape[:2]
+        for obj in objs:
+            if obj.class_name not in ("bee", "pollen_bee"):
+                continue
+            x1, y1, x2, y2 = (int(round(v)) for v in obj.bbox)
+            x1 = max(0, min(x1, w - 1))
+            x2 = max(0, min(x2, w))
+            y1 = max(0, min(y1, h - 1))
+            y2 = max(0, min(y2, h))
+            if x2 - x1 < 2 or y2 - y1 < 2:
+                continue
+            if self.varroa_classifier.is_varroa(frame[y1:y2, x1:x2]):
+                obj.class_name = "varroa_bee"
 
     def process_video(
         self,
@@ -256,7 +303,8 @@ class CVPipeline:
         writer = None
         if output_path is not None:
             writer = imageio.get_writer(
-                output_path, fps=fps, codec="libx264", macro_block_size=8
+                output_path, fps=fps, codec="libx264", macro_block_size=8,
+                output_params=["-preset", "ultrafast"],  # faster CPU encode
             )
 
         bee_counts: List[int] = []

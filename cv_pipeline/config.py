@@ -26,24 +26,17 @@ _DEFAULTS: Dict[str, Any] = {
     },
     "tracker": {"track_buffer": 30, "match_thresh": 0.8},
     "analytics": {
-        "pollen_good_threshold": 0.1,
-        "varroa_warn_threshold": 0.15,
-        "wasp_threat_threshold": 0.05,
-        "low_activity_threshold": 0.3,
-        "health_weights": {
-            "base": 70,
-            "pollen_bonus": 10,
-            "varroa_penalty": 20,
-            "wasp_penalty": 25,
-            "low_activity_penalty": 10,
-        },
+        "varroa_penalty_per_pct": 2.5,
+        "low_pollen_penalty": 5.0,
+        "low_pollen_threshold": 1.0,
+        "healthy_score": 70,
+        "warning_score": 40,
     },
     "visualize": {
         "colors": {
             "bee": [0, 200, 0],
             "pollen_bee": [0, 220, 255],
             "varroa_bee": [0, 0, 220],
-            "wasp": [0, 140, 255],
         }
     },
     "motion": {

@@ -2,7 +2,6 @@ const CLASSES = [
   { name: 'Bee', color: 'rgb(0,200,0)' },
   { name: 'Pollen', color: 'rgb(255,220,0)' },
   { name: 'Varroa', color: 'rgb(220,0,0)' },
-  { name: 'Wasp', color: 'rgb(255,140,0)' },
 ];
 
 export default function ClassLegend() {

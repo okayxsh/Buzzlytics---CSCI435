@@ -27,24 +27,18 @@ def _make_config():
         },
         "tracker": {"track_buffer": 30, "match_thresh": 0.8},
         "analytics": {
-            "pollen_good_threshold": 0.1,
-            "varroa_warn_threshold": 0.15,
-            "wasp_threat_threshold": 0.05,
-            "low_activity_threshold": 0.3,
-            "health_weights": {
-                "base": 70,
-                "pollen_bonus": 10,
-                "varroa_penalty": 20,
-                "wasp_penalty": 25,
-                "low_activity_penalty": 10,
-            },
+            "varroa_penalty_per_pct": 2.5,
+            "low_pollen_penalty": 5.0,
+            "low_pollen_threshold": 1.0,
+            "healthy_score": 70,
+            "warning_score": 40,
         },
+        "varroa_classifier": {"enabled": False},
         "visualize": {
             "colors": {
                 "bee": [0, 200, 0],
                 "pollen_bee": [0, 220, 255],
                 "varroa_bee": [0, 0, 220],
-                "wasp": [0, 140, 255],
             }
         },
         "video": {"frame_skip": 1},
@@ -69,7 +63,7 @@ def _make_pipe_no_tracker():
 
 
 # ---------------------------------------------------------------------------
-# Fake detections — 5 objects across all 4 classes
+# Fake detections — 4 objects (2 bee, 1 pollen, 1 varroa)
 # ---------------------------------------------------------------------------
 
 FAKE_DETECTIONS = [
@@ -77,7 +71,6 @@ FAKE_DETECTIONS = [
     Detection(bbox=[10.0, 0.0, 20.0, 10.0], confidence=0.85, class_id=0, class_name="bee"),
     Detection(bbox=[20.0, 0.0, 30.0, 10.0], confidence=0.8, class_id=1, class_name="pollen_bee"),
     Detection(bbox=[30.0, 0.0, 40.0, 10.0], confidence=0.75, class_id=2, class_name="varroa_bee"),
-    Detection(bbox=[40.0, 0.0, 50.0, 10.0], confidence=0.7, class_id=3, class_name="wasp"),
 ]
 
 
@@ -98,11 +91,11 @@ def test_detection_counts_flow_into_analytics(monkeypatch):
     result = pipe.process_frame(dummy_frame)
     summary = result["summary"]
 
-    assert summary["total_bees"] == 5, (
-        f"Expected total_bees=5, got {summary['total_bees']}"
+    assert summary["total_bees"] == 4, (
+        f"Expected total_bees=4, got {summary['total_bees']}"
     )
-    assert summary["active_bees"] == 2, (
-        f"Expected active_bees=2 (two plain bees), got {summary['active_bees']}"
+    assert summary["active_bees"] == 3, (
+        f"Expected active_bees=3 (2 bee + 1 pollen), got {summary['active_bees']}"
     )
     assert summary["pollen_bees"] == 1, (
         f"Expected pollen_bees=1, got {summary['pollen_bees']}"
@@ -110,9 +103,7 @@ def test_detection_counts_flow_into_analytics(monkeypatch):
     assert summary["varroa_bees"] == 1, (
         f"Expected varroa_bees=1, got {summary['varroa_bees']}"
     )
-    assert summary["wasps"] == 1, (
-        f"Expected wasps=1, got {summary['wasps']}"
-    )
+    assert "wasps" not in summary
 
 
 def test_zero_detections_gives_zero_counts(monkeypatch):
@@ -128,7 +119,7 @@ def test_zero_detections_gives_zero_counts(monkeypatch):
     assert summary["active_bees"] == 0
     assert summary["pollen_bees"] == 0
     assert summary["varroa_bees"] == 0
-    assert summary["wasps"] == 0
+    assert "wasps" not in summary
 
 
 def test_result_dict_contains_detections_not_tracks(monkeypatch):
@@ -141,6 +132,6 @@ def test_result_dict_contains_detections_not_tracks(monkeypatch):
     result = pipe.process_frame(dummy_frame)
 
     assert result["tracks"] == [], "tracks must be empty in detection-only mode"
-    assert len(result["detections"]) == 5, (
-        f"Expected 5 detections in result, got {len(result['detections'])}"
+    assert len(result["detections"]) == 4, (
+        f"Expected 4 detections in result, got {len(result['detections'])}"
     )

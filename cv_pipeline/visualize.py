@@ -24,7 +24,6 @@ DEFAULT_COLOR_MAP: Dict[str, Tuple[int, int, int]] = {
     "bee": (0, 200, 0),            # Green
     "pollen_bee": (0, 220, 255),   # Yellow (BGR)
     "varroa_bee": (0, 0, 220),     # Red
-    "wasp": (0, 140, 255),         # Orange (BGR)
 }
 
 
@@ -268,11 +267,10 @@ class Visualizer:
             f"Active: {summary.get('active_bees', 0)}",
             f"Pollen: {summary.get('pollen_bees', 0)}",
             f"Varroa: {summary.get('varroa_bees', 0)}",
-            f"Wasps: {summary.get('wasps', 0)}",
             f"Health Score: {summary.get('health_score', 0)}",
             f"Status: {summary.get('health_status', 'N/A')}",
-            f"Activity: {summary.get('activity_rate', 0):.1%}",
-            f"Infection: {summary.get('infection_rate', 0):.1%}",
+            f"Activity: {summary.get('activity_rate', 0):.1f}%",
+            f"Infection: {summary.get('infection_rate', 0):.1f}%",
         ]
 
         y_offset = 10 + line_height

@@ -18,28 +18,35 @@ def _tracks(names):
     return [FakeTrack(class_name=n, track_id=i) for i, n in enumerate(names)]
 
 
-def test_counts_unified_classes():
+def test_counts_classes():
     eng = AnalyticsEngine()
-    eng.update(_tracks(["bee", "bee", "pollen_bee", "varroa_bee", "wasp"]))
+    eng.update(_tracks(["bee", "bee", "pollen_bee", "varroa_bee"]))
     s = eng.get_summary()
-    assert s["total_bees"] == 5
-    assert s["active_bees"] == 2
+    assert s["total_bees"] == 4
+    assert s["active_bees"] == 3  # 2 bee + 1 pollen (healthy/active)
     assert s["pollen_bees"] == 1
     assert s["varroa_bees"] == 1
-    assert s["wasps"] == 1
-    assert "dead_bees" not in s
-    assert "varroa_infected" not in s
+    assert "wasps" not in s  # wasp class dropped
+    assert s["infection_rate"] == 25.0  # 1/4
 
 
-def test_wasp_presence_penalizes_health():
+def test_varroa_lowers_health():
     eng = AnalyticsEngine()
-    # 10 bees, no wasp -> healthy-ish baseline
     eng.update(_tracks(["bee"] * 10))
     base = eng.compute_health_score()
-    # add wasps above 5% threshold -> penalty applied
-    eng.update(_tracks(["bee"] * 8 + ["wasp"] * 2))
-    with_wasp = eng.compute_health_score()
-    assert with_wasp < base
+    eng.update(_tracks(["bee"] * 7 + ["varroa_bee"] * 3))  # 30% infection
+    infected = eng.compute_health_score()
+    assert infected < base
+
+
+def test_health_score_is_continuous_and_responsive():
+    eng = AnalyticsEngine()
+    # clean colony with foraging -> near 100
+    eng.update(_tracks(["bee"] * 9 + ["pollen_bee"]))
+    assert eng.compute_health_score() >= 95
+    # 20% infection -> ~50 (100 - 2.5*20)
+    eng.update(_tracks(["bee"] * 8 + ["varroa_bee"] * 2))
+    assert 45 <= eng.compute_health_score() <= 55
 
 
 def test_empty_returns_zero_score():

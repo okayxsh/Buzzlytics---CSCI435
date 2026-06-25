@@ -36,12 +36,11 @@ const CLASSES = [
   { icon: Activity, name: 'Bee', tone: 'text-forest-600', chip: 'bg-forest-50 border-forest-200', dot: 'bg-forest-500', desc: 'Healthy forager bees crawling and flying at the entrance — the baseline of a thriving colony.' },
   { icon: Flower2, name: 'Pollen-laden', tone: 'text-honey-600', chip: 'bg-honey-50 border-honey-200', dot: 'bg-honey-400', desc: 'Returning bees carrying pollen loads, a direct read on foraging success.' },
   { icon: ShieldAlert, name: 'Varroa-hit', tone: 'text-amberwarn', chip: 'bg-honey-50 border-honey-200', dot: 'bg-amberwarn', desc: 'Bees showing mite infestation — the single biggest driver of colony collapse.' },
-  { icon: Bug, name: 'Wasp', tone: 'text-clay', chip: 'bg-[#F6E6DF] border-[#E7C5B7]', dot: 'bg-clay', desc: 'Wasps at the entrance — a robbing/predation threat to the colony.' },
 ];
 
 const PIPELINE = [
   { icon: Sparkles, step: '01', name: 'Clarify the frame', tech: 'CLAHE · denoise', desc: 'Adaptive histogram equalization and non-local-means denoising rescue detail from the harsh, shifting light of a hive entrance.' },
-  { icon: ScanSearch, step: '02', name: 'Find every bee', tech: 'YOLOv8', desc: 'A fine-tuned detection network locates each bee and sorts it into one of four health states, frame after frame.' },
+  { icon: ScanSearch, step: '02', name: 'Find every bee', tech: 'YOLOv8 + classifier', desc: 'A fine-tuned detector locates each bee as bee or pollen-laden, then a varroa classifier checks each one for mites, frame after frame.' },
   { icon: Route, step: '03', name: 'Follow them', tech: 'ByteTrack', desc: 'Persistent tracking gives every bee a stable identity, so counts stay honest and movement trails stay coherent.' },
   { icon: LineChart, step: '04', name: 'Read the colony', tech: 'Health score', desc: 'Rates, ratios and trends fold into one clinical score with plain-language guidance you can act on.' },
 ];
@@ -59,7 +58,6 @@ const READOUT = [
   { k: 'Active', v: 184, tone: 'text-forest-600' },
   { k: 'Pollen', v: 47, tone: 'text-honey-600' },
   { k: 'Varroa', v: 6, tone: 'text-amberwarn' },
-  { k: 'Wasp', v: 2, tone: 'text-clay' },
 ];
 
 export default function Home() {
@@ -342,7 +340,7 @@ export default function Home() {
           <Reveal delay={0.15}>
             <div className="grid grid-cols-2 gap-5">
               {[
-                { v: '4', l: 'Bee classes', s: 'Bee · Pollen · Varroa · Wasp', tone: 'text-forest-700' },
+                { v: '3', l: 'Bee classes', s: 'Bee · Pollen · Varroa', tone: 'text-forest-700' },
                 { v: '0–100', l: 'Health index', s: 'A single clinical score', tone: 'text-honey-600' },
                 { v: '~60', l: 'Frames / sec', s: 'When a GPU is available', tone: 'text-forest-700' },
                 { v: '24/7', l: 'Watching', s: 'No manual inspection', tone: 'text-honey-600' },

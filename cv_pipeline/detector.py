@@ -48,8 +48,8 @@ class BeeDetector:
     """YOLOv8-based detector for bee-related objects.
 
     Loads a YOLOv8 model and runs inference on video frames to detect
-    four classes of interest in beehive monitoring: bee,
-    pollen_bee, varroa_bee, and wasp.
+    two classes of interest in beehive monitoring: bee and pollen_bee.
+    (varroa_bee is assigned later by the stage-2 classifier.)
 
     If a custom model file exists at the specified path, it will be
     loaded. Otherwise, the pretrained YOLOv8 nano model is used as a

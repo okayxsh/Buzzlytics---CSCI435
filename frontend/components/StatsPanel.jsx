@@ -73,22 +73,7 @@ export default function StatsPanel({ data }) {
         const rate = d.total_bees ? (v / d.total_bees) * 100 : 0;
         if (rate > 15) return { dir: 'down', text: 'High' };
         if (rate > 5) return { dir: 'neutral', text: 'Moderate' };
-        return { dir: 'up', text: 'Low' };
-      },
-    },
-    {
-      key: 'wasps',
-      label: 'Wasps',
-      icon: ShieldAlert,
-      format: (v) => Math.round(v).toLocaleString(),
-      getColor: (v, d) => {
-        const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        return ratio > 5 ? 'critical' : ratio > 1 ? 'warning' : 'healthy';
-      },
-      getTrend: (v, d) => {
-        const ratio = d.total_bees ? (v / d.total_bees) * 100 : 0;
-        if (ratio > 5) return { dir: 'down', text: 'Threat' };
-        if (ratio > 1) return { dir: 'neutral', text: 'Present' };
+        if (rate > 0) return { dir: 'up', text: 'Low' };
         return { dir: 'up', text: 'Clear' };
       },
     },
@@ -193,7 +178,7 @@ export default function StatsPanel({ data }) {
   if (!derivedData) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="rounded-2xl border border-line bg-cream p-6 opacity-60">
             <div className="mb-5 flex items-center justify-between">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sand">

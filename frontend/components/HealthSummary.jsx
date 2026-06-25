@@ -13,16 +13,15 @@ export default function HealthSummary({ data }) {
 
     const score = data.health_score ?? 0;
     const infectionRate = data.infection_rate ?? 0;
-    const waspRatio = data.total_bees ? (data.wasps ?? 0) / data.total_bees * 100 : 0;
     const pollenRatio = data.total_bees ? (data.pollen_bees ?? 0) / data.total_bees * 100 : 0;
     const activityRate = data.activity_rate ?? 0;
 
     let currentStatus = 'healthy';
     const recs = [];
 
-    if (score < 40 || infectionRate > 15 || waspRatio > 5) {
+    if (score < 40 || infectionRate > 15) {
       currentStatus = 'critical';
-    } else if (score < 70 || infectionRate > 5 || waspRatio > 1 || activityRate < 30) {
+    } else if (score < 70 || infectionRate > 5 || activityRate < 30) {
       currentStatus = 'warning';
     }
 
@@ -37,20 +36,6 @@ export default function HealthSummary({ data }) {
         type: 'warning',
         icon: AlertTriangle,
         text: 'Moderate varroa mite levels observed. Monitor closely and prepare treatment if levels rise.',
-      });
-    }
-
-    if (waspRatio > 5) {
-      recs.push({
-        type: 'critical',
-        icon: AlertOctagon,
-        text: 'Heavy wasp presence at entrance. Likely robbing/predation — reduce entrance size and inspect.',
-      });
-    } else if (waspRatio > 1) {
-      recs.push({
-        type: 'warning',
-        icon: AlertTriangle,
-        text: 'Wasps detected near the entrance. Monitor for robbing behaviour.',
       });
     }
 

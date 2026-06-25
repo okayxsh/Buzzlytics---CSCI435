@@ -9,11 +9,11 @@ def test_missing_file_returns_defaults():
     assert cfg == get_default_config()
 
 
-def test_defaults_have_unified_classes():
+def test_defaults_have_detection_classes():
     cfg = get_default_config()
     colors = cfg["visualize"]["colors"]
-    assert set(colors) == {"bee", "pollen_bee", "varroa_bee", "wasp"}
-    assert colors["wasp"] == [0, 140, 255]
+    assert set(colors) == {"bee", "pollen_bee", "varroa_bee"}
+    assert colors["varroa_bee"] == [0, 0, 220]
 
 
 def test_file_overrides_merge_over_defaults(tmp_path):
@@ -24,4 +24,4 @@ def test_file_overrides_merge_over_defaults(tmp_path):
     assert cfg["detector"]["conf_threshold"] == 0.5
     # untouched default still present (deep merge, not replace)
     assert cfg["detector"]["iou_threshold"] == 0.45
-    assert cfg["analytics"]["health_weights"]["wasp_penalty"] == 25
+    assert cfg["analytics"]["varroa_penalty_per_pct"] == 2.5

@@ -371,11 +371,10 @@ class Visualizer:
         if tracks is not None:
             frame = self.draw_tracks(frame, tracks, track_histories)
 
-        # Draw stats overlay panel
+        # Stats text panel intentionally NOT drawn on the frame — the dashboard
+        # UI already shows these metrics, and the overlay just clutters the video.
         if summary is not None:
-            frame = self.draw_stats_overlay(frame, summary)
-
-            # Draw health indicator if status is available
+            # Keep the small corner health indicator dot only.
             health_status = summary.get("health_status")
             if health_status is not None:
                 frame = self.draw_health_indicator(frame, str(health_status))

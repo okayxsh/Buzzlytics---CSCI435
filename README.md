@@ -268,9 +268,9 @@ The builder produces **two** datasets from two public sources (no API key needed
 python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
 ```
 
-The detection config is written to `datasets/data/bee_dataset.yaml`. The end-to-end path:
-run `training/build_dataset_colab.ipynb` once (builds both zips into your Drive), then
-`training/colab_train.ipynb` (detector) and `training/colab_train_varroa_cls.ipynb` (varroa classifier).
+The detection config is written to `datasets/data/bee_dataset.yaml`. The end-to-end path is two Colab
+notebooks: run `training/build_dataset_colab.ipynb` once (builds both zips into your Drive), then
+`training/colab_train.ipynb` (trains **both** the detector and the varroa classifier).
 Drop `best.pt` → `cv_pipeline/weights/best.pt` and `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`.
 
 ### Label Format (YOLO)

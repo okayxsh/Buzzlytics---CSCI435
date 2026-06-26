@@ -166,12 +166,13 @@ You need to run both the backend and frontend simultaneously.
 # Make sure your virtual environment is activated
 source venv/bin/activate
 
-# Start the FastAPI server
-cd backend
-python main.py
+# Start the FastAPI server FROM THE PROJECT ROOT (not from backend/).
+# config.yaml and the model weights are resolved relative to the working
+# directory, so the server must be launched from the repo root.
+python backend/main.py
 ```
 
-The backend will be available at `http://localhost:8000`. You can verify it is running by visiting `http://localhost:8000/api/health`.
+The backend will be available at `http://localhost:8000` (API docs at `http://localhost:8000/docs`).
 
 ### Terminal 2: Start the Frontend
 
@@ -185,11 +186,11 @@ The frontend will be available at `http://localhost:3000`.
 
 ### Quick Start (Both at Once)
 
-On macOS/Linux:
+On macOS/Linux (run both from the project root):
 
 ```bash
-# Start backend in background
-cd backend && python main.py &
+# Start backend in background (from repo root — paths are root-relative)
+python backend/main.py &
 # Start frontend
 cd frontend && npm run dev
 ```

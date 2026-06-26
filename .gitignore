@@ -19,6 +19,9 @@ env/
 *.engine
 *.tflite
 runs/
+# ...but DO ship the trained Buzzlytics weights so the app runs on a fresh clone
+!cv_pipeline/weights/best.pt
+!cv_pipeline/weights/varroa_cls.pt
 
 # Dataset files (images, labels, videos)
 datasets/images/

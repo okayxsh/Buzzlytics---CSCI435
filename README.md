@@ -142,15 +142,16 @@ npm install
 cd ..
 ```
 
-### 4. (Optional) Download a Custom Trained Model
+### 4. Model weights (already included)
 
-If you have trained a custom bee detection model (see [Model Training](#model-training)), copy the weights:
+The trained two-stage models ship with the repo, so it runs out of the box:
 
-```bash
-cp training/runs/bee_detector/weights/best.pt cv_pipeline/custom_bee_model.pt
-```
+- `cv_pipeline/weights/best.pt` — stage-1 detector (`bee`, `pollen_bee`)
+- `cv_pipeline/weights/varroa_cls.pt` — stage-2 varroa classifier (`healthy`, `varroa`)
 
-If no custom model is found, the system automatically uses the pretrained YOLOv8 nano model, which will be downloaded on first run.
+No download or training needed. (To retrain, see [Model Training](#model-training) and drop the new
+weights at those same paths.) If `best.pt` is ever missing, the app falls back to a generic YOLOv8
+nano model — it will run but won't detect bees meaningfully.
 
 ---
 

@@ -4,6 +4,10 @@ detector:
   conf_threshold: 0.4
   iou_threshold: 0.45
   imgsz: 960   # higher = catches more small/packed bees (640->960 ~ +40% recall on dense frames). Lower to 640 for faster video.
+  # pollen_bee is the minority/hard class and over-fires on out-of-domain bees
+  # (e.g. golden Apis mellifera abdomens read as pollen). Require higher
+  # confidence for pollen; below this a "pollen_bee" is demoted to "bee".
+  pollen_min_conf: 0.55
 
 # Stage-2 per-bee varroa classifier (healthy vs varroa). Runs on each
 # detected bee crop and upgrades its label to varroa_bee when infected.

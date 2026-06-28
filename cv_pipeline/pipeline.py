@@ -69,6 +69,7 @@ class CVPipeline:
             conf_threshold if conf_threshold is not None else det["conf_threshold"]
         )
         self.use_tracker = use_tracker
+        self._pollen_min_conf = float(det.get("pollen_min_conf", 0.55))
 
         # Convert color lists from YAML into BGR tuples for OpenCV.
         color_map = {
@@ -202,6 +203,11 @@ class CVPipeline:
             # Detection-only path
             detections = self.detector.detect(frame)
 
+        # Step 2b: demote low-confidence pollen_bee -> bee. Pollen is the
+        # minority/hard class and over-fires on out-of-domain bees; requiring
+        # higher confidence removes most false-positive pollen labels.
+        self._gate_pollen(tracks if tracks else detections)
+
         # Step 2c: per-bee varroa classification (stage 2). Crop each detected
         # bee from the ORIGINAL frame and upgrade its label to "varroa_bee"
         # when the classifier flags infection. Operates in-place on the
@@ -238,6 +244,20 @@ class CVPipeline:
                 "blob_count": motion_result.blob_count,
             },
         }
+
+    def _gate_pollen(self, objs: List) -> None:
+        """Demote pollen_bee detections below the pollen confidence floor to bee.
+
+        Mutates ``class_name``/``class_id`` in place. Objects must have
+        ``confidence``, ``class_name`` and ``class_id`` attributes.
+        """
+        for obj in objs:
+            if (
+                obj.class_name == "pollen_bee"
+                and obj.confidence < self._pollen_min_conf
+            ):
+                obj.class_name = "bee"
+                obj.class_id = 0
 
     def _classify_varroa(self, frame: NDArray[np.uint8], objs: List) -> None:
         """Upgrade detected bees to 'varroa_bee' via the stage-2 classifier.

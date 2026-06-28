@@ -22,7 +22,8 @@ _DEFAULTS: Dict[str, Any] = {
         "model_path": "cv_pipeline/weights/best.pt",
         "conf_threshold": 0.4,
         "iou_threshold": 0.45,
-        "imgsz": 640,
+        "imgsz": 960,
+        "pollen_min_conf": 0.55,
     },
     "varroa_classifier": {
         "enabled": True,

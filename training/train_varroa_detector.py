@@ -34,6 +34,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--imgsz", type=int, default=960)
     parser.add_argument("--patience", type=int, default=20)
     parser.add_argument(
+        "--fraction",
+        type=float,
+        default=1.0,
+        help="Fraction of training data to use; useful for CPU smoke training",
+    )
+    parser.add_argument(
         "--project",
         default=str(PROJECT_ROOT / "training" / "runs"),
         help="Training output directory",
@@ -62,6 +68,7 @@ def main() -> None:
         batch=args.batch,
         imgsz=args.imgsz,
         patience=args.patience,
+        fraction=args.fraction,
         project=args.project,
         name=args.name,
         exist_ok=True,

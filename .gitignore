@@ -77,3 +77,4 @@ training/wandb/
 
 # Logs
 *.log
+node_modules

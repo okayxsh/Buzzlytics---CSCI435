@@ -112,7 +112,7 @@ def _ensure_dirs(out: Path) -> None:
         (out / split / "labels").mkdir(parents=True, exist_ok=True)
 
 
-def build_dataset(source: Path, out: Path) -> int:
+def build_dataset(source: Path, out: Path, split_override: Optional[str] = None) -> int:
     source = source.resolve()
     out = out.resolve()
     _ensure_dirs(out)
@@ -137,7 +137,7 @@ def build_dataset(source: Path, out: Path) -> int:
         coords = [float(value) for value in parts[2:]]
         label_lines = _boxes_to_yolo(coords, img_w, img_h) if mite_count > 0 else []
 
-        split = _split_for(raw_image)
+        split = split_override or _split_for(raw_image)
         stem = _safe_stem(raw_image)
         dest_img = out / split / "images" / f"{stem}{image_path.suffix.lower()}"
         dest_lbl = out / split / "labels" / f"{stem}.txt"
@@ -161,9 +161,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build YOLO Varroa mite detection data")
     parser.add_argument("--source", required=True, help="Folder containing gt_one.csv/gt.csv and images")
     parser.add_argument("--out", default="datasets/varroa_det", help="Output YOLO dataset folder")
+    parser.add_argument(
+        "--split",
+        choices=["train", "valid", "test"],
+        default=None,
+        help="Force all rows from this source into one split",
+    )
     args = parser.parse_args()
 
-    count = build_dataset(Path(args.source), Path(args.out))
+    count = build_dataset(Path(args.source), Path(args.out), split_override=args.split)
     print(f"Wrote {count} images to {Path(args.out).resolve()}")
     print(f"Data YAML: {(Path(args.out) / 'varroa_mite.yaml').resolve()}")
 

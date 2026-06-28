@@ -1,6 +1,6 @@
 # Buzzlytics: Computer Vision Hive Health Dashboard
 
-Buzzlytics is an analytical, automated monitoring platform that converts video feeds of a beehive entrance into real-time colony health diagnostics. By eliminating manual hive inspections and visual counts, the platform delivers precise, automated quantitative tracking parameters for beekeepers to prevent colony collapse.
+Buzzlytics is a computer-vision hive health prototype that converts uploaded hive entrance videos, still frames, and close-up bee crops into annotated analysis results. It combines bee detection, pollen-return estimation, tracking, motion analysis, and Varroa crop inspection in a local FastAPI + Next.js application.
 
 ---
 
@@ -23,11 +23,11 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 ## Features
 
 - **Video Upload Processing**: Upload pre-recorded hive videos for batch analysis with annotated output and health reports
-- **Live Webcam Streaming**: Real-time bee monitoring via WebSocket-based frame streaming with instant annotations
-- **Two-Stage Bee Analysis**: A YOLOv8 detector boxes every bee as bee/pollen-carrying; a second classifier marks each detected bee as varroa-infected or healthy
+- **WebSocket Frame Endpoint**: Backend support for live frame processing via `/ws/webcam` for future webcam UI work
+- **Two-Stage Bee Analysis**: A YOLOv8 detector boxes every bee as bee/pollen-carrying; a separate close-up Varroa model classifies crops or, when detector weights are installed, detects mite boxes directly
 - **Multi-Object Tracking**: ByteTrack-based persistent identity tracking across video frames
 - **Health Score Engine**: Algorithmic hive health scoring (0-100) with clinical status classification
-- **Real-Time Analytics Dashboard**: Live metrics panel with counts, rates, and trend indicators
+- **Analytics Dashboard**: Metrics panel with counts, pollen return rate, activity rate, health score, and trend indicators
 
 ---
 
@@ -57,12 +57,11 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 5. Frontend polls `GET /api/video/status/{id}` until complete
 6. Annotated video and analytics summary are displayed
 
-**Live Webcam Flow:**
-1. Frontend captures webcam frames at ~10 FPS
-2. Each frame is base64-encoded and sent via WebSocket
-3. Backend decodes frame and runs CV Pipeline
-4. Annotated frame and analytics are sent back via WebSocket
-5. Frontend renders annotated frame on canvas and updates dashboard
+**Backend Live Frame Flow (prototype endpoint):**
+1. A client sends base64-encoded camera frames via WebSocket
+2. Backend decodes each frame and runs the CV pipeline
+3. Annotated frame and analytics are sent back via WebSocket
+4. The current shipped frontend focuses on uploaded video, uploaded image, and Varroa crop workflows
 
 ---
 
@@ -86,6 +85,17 @@ Why two stages: the varroa mite is tiny and only annotated as single-bee classif
 (VarroaDataset), not boxed bees-in-scene — so forcing it into detection ruins per-bee localization.
 This detect-then-classify design follows IntelliBeeHive / BeeAlarmed.
 
+To upgrade close-up Varroa from classification to true mite detection:
+
+```bash
+python training/make_varroa_detection_dataset.py --source <varroa-folder-with-gt_one.csv> --out datasets/varroa_det
+python training/train_varroa_detector.py --data datasets/varroa_det/varroa_mite.yaml --epochs 80 --imgsz 960
+```
+
+Then copy `training/runs/varroa_mite_detector/weights/best.pt` to
+`cv_pipeline/weights/varroa_det.pt`. The `/api/varroa` route will use detector
+mode automatically when that file exists; otherwise it falls back to classifier mode.
+
 ---
 
 ## Tech Stack
@@ -104,7 +114,7 @@ This detect-then-classify design follows IntelliBeeHive / BeeAlarmed.
 - **Python** 3.10 or higher
 - **Node.js** 18 or higher
 - **npm** 9 or higher
-- **Webcam** (for live streaming feature)
+- **Webcam** (optional, only if building against the backend WebSocket frame endpoint)
 - **CUDA-capable GPU** (recommended for real-time performance, but CPU works)
 
 ---
@@ -371,24 +381,23 @@ Receive (server to client):
 
 ## User Story
 
-**As a beekeeper**, I want to monitor the health of my beehives remotely using video feeds so that I can detect problems early and prevent colony collapse without frequent manual inspections.
+**As a beekeeper**, I want to analyze hive entrance footage and close-up bee crops so that I can turn visual inspection into repeatable evidence about activity, pollen return, and Varroa risk.
 
 **Scenario 1 - Video Upload Analysis:**
 I upload a video of my hive entrance recorded during the morning foraging period. The system processes the video and shows me:
 - An annotated video with bounding boxes around each detected bee, color-coded by health status
-- A count of healthy bees, pollen-carrying bees, varroa-infected bees, and wasps
+- A count of detected bees, pollen-carrying bees, and entrance-video Varroa flags
 - A health score of 75/100 with a "Healthy" classification
 - A recommendation noting good foraging activity based on the pollen-carrying ratio
 
-**Scenario 2 - Live Webcam Monitoring:**
-I connect my webcam pointed at the hive entrance. The system processes frames in real-time and:
-- Displays a live annotated video feed with bounding boxes and tracking trails
-- Continuously updates bee counts and health metrics
-- Alerts me when the varroa infection rate exceeds 15%, suggesting immediate mite treatment
-- Shows an activity rate below 30%, warning of potential queen issues
+**Scenario 2 - Close-up Varroa Crop Inspection:**
+I upload a close-up crop of a bee. The system processes the crop and:
+- Predicts whether the crop shows Varroa evidence
+- Displays model confidence and class scores
+- Shows reference mite count when dataset annotations are available
+- Highlights either reference markings or an estimated model-focus region
 
 **Value Delivered:**
-- Eliminates the need for daily physical hive inspections
 - Provides quantitative health data instead of subjective visual assessment
-- Enables early detection of varroa mite infestations before they cause colony collapse
+- Supports Varroa screening through a dedicated close-up crop workflow
 - Tracks foraging activity trends over time to identify declining hive productivity

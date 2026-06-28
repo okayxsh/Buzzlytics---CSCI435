@@ -67,12 +67,18 @@ class BeeTracker:
         imgsz: int = 640,
         track_buffer: int = 30,
         match_thresh: float = 0.8,
+        track_high_thresh: float = 0.25,
+        track_low_thresh: float = 0.1,
+        new_track_thresh: float = 0.25,
     ) -> None:
         self.conf_threshold = conf_threshold
         self.iou_threshold = iou_threshold
         self.imgsz = imgsz
         self.track_buffer = track_buffer
         self.match_thresh = match_thresh
+        self.track_high_thresh = track_high_thresh
+        self.track_low_thresh = track_low_thresh
+        self.new_track_thresh = new_track_thresh
         self._model = None
         self._tracker_yaml: Optional[str] = None
         self._track_histories: Dict[int, List[Tuple[float, float]]] = {}
@@ -105,9 +111,9 @@ class BeeTracker:
         )
         content = (
             "tracker_type: bytetrack\n"
-            "track_high_thresh: 0.25\n"
-            "track_low_thresh: 0.1\n"
-            "new_track_thresh: 0.25\n"
+            f"track_high_thresh: {self.track_high_thresh}\n"
+            f"track_low_thresh: {self.track_low_thresh}\n"
+            f"new_track_thresh: {self.new_track_thresh}\n"
             f"track_buffer: {self.track_buffer}\n"
             f"match_thresh: {self.match_thresh}\n"
             "fuse_score: true\n"

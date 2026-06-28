@@ -8,6 +8,10 @@ detector:
   # (e.g. golden Apis mellifera abdomens read as pollen). Below this a
   # "pollen_bee" is demoted to "bee". 0.3 = in-domain; raise to ~0.55 out-of-domain.
   pollen_min_conf: 0.3
+  min_box_width: 12
+  min_box_height: 12
+  min_box_area_pct: 0.00008
+  max_box_aspect_ratio: 4.0
 
 # Stage-2 per-bee varroa classifier (healthy vs varroa). Runs on each
 # detected bee crop and upgrades its label to varroa_bee when infected.
@@ -20,9 +24,19 @@ varroa_classifier:
   vote_window: 5
   min_track_hits: 2
 
+varroa_detector:
+  enabled: true
+  model_path: cv_pipeline/weights/varroa_det.pt
+  conf_threshold: 0.35
+  iou_threshold: 0.45
+  imgsz: 960
+
 tracker:
-  track_buffer: 30
-  match_thresh: 0.8
+  track_buffer: 10
+  match_thresh: 0.85
+  track_high_thresh: 0.55
+  track_low_thresh: 0.25
+  new_track_thresh: 0.55
 
 analytics:
   varroa_penalty_per_pct: 2.5   # health -= this * infection_rate(%)

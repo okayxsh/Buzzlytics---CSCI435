@@ -12,6 +12,9 @@ import {
   Activity,
   ScanSearch,
   ShieldAlert,
+  CheckCircle2,
+  Camera,
+  Info,
 } from 'lucide-react';
 import UploadVideo from '../components/UploadVideo';
 import UploadImage from '../components/UploadImage';
@@ -30,6 +33,27 @@ const TABS = [
   { id: 'image', label: 'Image', icon: ImageIcon },
   { id: 'varroa', label: 'Varroa', icon: ScanSearch },
 ];
+
+const WORKFLOW_GUIDANCE = {
+  video: {
+    title: 'Best fit: entrance-camera footage',
+    note: 'Use bright, stable clips where bees are large enough to see pollen baskets. Dark wood, blur, compression, and wide angles will reduce pollen reliability.',
+    checks: ['Stable entrance view', 'Good lighting', 'Visible bee legs'],
+    icon: Video,
+  },
+  image: {
+    title: 'Best fit: still entrance frame',
+    note: 'Still images are useful for showing annotated detections and explaining the pollen model without waiting for a full video pass.',
+    checks: ['Clear frame', 'Entrance angle', 'Minimal motion blur'],
+    icon: Camera,
+  },
+  varroa: {
+    title: 'Best fit: close-up bee crop',
+    note: 'This is the correct workflow for Varroa demos. Wide entrance footage is not the right scale for reliable mite inspection.',
+    checks: ['Close-up bee body', 'Sharp crop', 'Mite-sized details visible'],
+    icon: ScanSearch,
+  },
+};
 
 export default function Analysis() {
   const [activeTab, setActiveTab] = useState('video');
@@ -160,6 +184,8 @@ export default function Analysis() {
   const isVideoTab = activeTab === 'video';
   const isImageTab = activeTab === 'image';
   const isVarroaTab = activeTab === 'varroa';
+  const guidance = WORKFLOW_GUIDANCE[activeTab];
+  const GuidanceIcon = guidance.icon;
 
   return (
     <div className="relative min-h-screen">
@@ -195,6 +221,34 @@ export default function Analysis() {
               {label}
             </button>
           ))}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div className="rounded-2xl border border-line bg-cream p-5 shadow-soft">
+            <div className="flex gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-forest-50 text-forest-700">
+                <GuidanceIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="font-display text-lg font-semibold text-ink">{guidance.title}</div>
+                <p className="mt-1 text-sm leading-relaxed text-ink-soft">{guidance.note}</p>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-line bg-sand/70 p-5">
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
+              <Info className="h-3.5 w-3.5" />
+              Demo checklist
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+              {guidance.checks.map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm font-medium text-ink-soft">
+                  <CheckCircle2 className="h-4 w-4 text-forest-600" />
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ── Upload card (Video, Image, or Varroa tab) ───────────────────── */}
@@ -315,7 +369,7 @@ export default function Analysis() {
                     <VideoPlayer videoUrl={annotatedVideoUrl} />
                   </div>
                   <div className="mt-5">
-                    <ClassLegend />
+                    <ClassLegend showReliabilityNote />
                   </div>
                 </div>
 
@@ -349,7 +403,7 @@ export default function Analysis() {
                         className="w-full rounded-xl"
                       />
                       <div className="mt-5">
-                        <ClassLegend />
+                        <ClassLegend showReliabilityNote />
                       </div>
                     </div>
                     <div className="card p-7 md:p-8">
@@ -358,7 +412,7 @@ export default function Analysis() {
                   </div>
                 ) : (
                   <>
-                    <ClassLegend />
+                    <ClassLegend showReliabilityNote />
                     <div className="card p-7 md:p-8">
                       <HealthSummary data={summaryData} />
                     </div>
@@ -404,6 +458,18 @@ export default function Analysis() {
                       </div>
                     </div>
                     <div>
+                      <div className="data-label mb-1.5">Analysis method</div>
+                      <div className="font-display text-2xl font-semibold capitalize text-ink">
+                        {varroaData.prediction?.method || 'classifier'}
+                      </div>
+                      {varroaData.prediction?.method === 'detector' && (
+                        <div className="mt-1 text-sm text-ink-faint">
+                          {varroaData.detections?.length || 0} mite box
+                          {(varroaData.detections?.length || 0) === 1 ? '' : 'es'} found
+                        </div>
+                      )}
+                    </div>
+                    <div>
                       <div className="data-label mb-1.5">Confidence</div>
                       <div className="font-display text-3xl font-semibold tabular text-ink">
                         {`${((varroaData.prediction?.confidence || 0) * 100).toFixed(1)}%`}
@@ -416,9 +482,10 @@ export default function Analysis() {
                       </div>
                     </div>
                     <p className="text-sm leading-relaxed text-ink-soft">
-                      This mode is for close-up bee crop inspection. For VarroaDataset samples,
-                      reference mite markings can be shown alongside the classifier result. For
-                      other crops, the highlighted region is an occlusion-based model focus estimate.
+                      This mode is for close-up bee crop inspection. If mite-detector weights are
+                      installed, red boxes are model detections. Otherwise, this view uses the
+                      classifier and may show dataset reference markings or an occlusion-based
+                      model-focus estimate.
                     </p>
                   </div>
                 </div>

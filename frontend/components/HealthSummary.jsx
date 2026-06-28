@@ -29,13 +29,13 @@ export default function HealthSummary({ data }) {
       recs.push({
         type: 'critical',
         icon: AlertOctagon,
-        text: 'High varroa mite infestation detected. Consider mite treatment immediately.',
+        text: 'High entrance-video varroa flag rate. Confirm with the close-up Varroa crop workflow.',
       });
     } else if (infectionRate > 5) {
       recs.push({
         type: 'warning',
         icon: AlertTriangle,
-        text: 'Moderate varroa mite levels observed. Monitor closely and prepare treatment if levels rise.',
+        text: 'Moderate entrance-video varroa flags. Use close-up crop inspection before drawing a hive-health conclusion.',
       });
     }
 
@@ -43,7 +43,13 @@ export default function HealthSummary({ data }) {
       recs.push({
         type: 'healthy',
         icon: CheckCircle,
-        text: 'Good foraging activity observed.',
+        text: 'Strong pollen return signal in this entrance-style footage.',
+      });
+    } else if (data.total_bees) {
+      recs.push({
+        type: 'warning',
+        icon: Info,
+        text: 'Low pollen signal can reflect camera angle, lighting, blur, or distance, not only colony behavior.',
       });
     }
 
@@ -59,7 +65,7 @@ export default function HealthSummary({ data }) {
       recs.push({
         type: 'healthy',
         icon: CheckCircle,
-        text: 'Hive appears healthy with normal activity levels.',
+        text: 'No major activity warning from this input.',
       });
     }
 

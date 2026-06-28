@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+from typing import Dict, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -66,6 +66,43 @@ class VarroaClassifier:
         """True when a classifier model is loaded and usable."""
         return self._model is not None
 
+    def classify(self, crop: NDArray[np.uint8]) -> Dict[str, object]:
+        """Classify a bee crop and return label/confidence details."""
+        fallback = {
+            "label": "unavailable",
+            "confidence": 0.0,
+            "is_varroa": False,
+            "threshold": self.conf_threshold,
+        }
+        if self._model is None or crop is None or crop.size == 0:
+            return fallback
+        if crop.ndim != 3 or min(crop.shape[:2]) < 2:
+            return fallback
+
+        results = self._model(crop, verbose=False)
+        if not results:
+            return fallback
+        probs = getattr(results[0], "probs", None)
+        if probs is None:
+            return fallback
+
+        top1 = int(probs.top1)
+        conf = float(probs.top1conf)
+        names = results[0].names
+        name = names.get(top1) if hasattr(names, "get") else names[top1]
+        raw_probs = probs.data.cpu().numpy().tolist()
+        scores = {}
+        for idx, score in enumerate(raw_probs):
+            label = names.get(idx) if hasattr(names, "get") else names[idx]
+            scores[str(label)] = float(score)
+        return {
+            "label": name,
+            "confidence": conf,
+            "scores": scores,
+            "is_varroa": name == VARROA_LABEL and conf >= self.conf_threshold,
+            "threshold": self.conf_threshold,
+        }
+
     def is_varroa(self, crop: NDArray[np.uint8]) -> bool:
         """Return True if the bee crop is classified as varroa-infected.
 
@@ -73,20 +110,4 @@ class VarroaClassifier:
             crop: BGR image of a single detected bee (any size; the model
                 resizes internally). Empty/None crops return False.
         """
-        if self._model is None or crop is None or crop.size == 0:
-            return False
-        if crop.ndim != 3 or min(crop.shape[:2]) < 2:
-            return False
-
-        results = self._model(crop, verbose=False)
-        if not results:
-            return False
-        probs = getattr(results[0], "probs", None)
-        if probs is None:
-            return False
-
-        top1 = int(probs.top1)
-        conf = float(probs.top1conf)
-        names = results[0].names
-        name = names.get(top1) if hasattr(names, "get") else names[top1]
-        return name == VARROA_LABEL and conf >= self.conf_threshold
+        return bool(self.classify(crop)["is_varroa"])

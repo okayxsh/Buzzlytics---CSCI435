@@ -1,7 +1,7 @@
 # Buzzlytics configuration — single source of truth for tunable values.
 detector:
   model_path: cv_pipeline/weights/best.pt
-  conf_threshold: 0.25
+  conf_threshold: 0.4
   iou_threshold: 0.45
   imgsz: 640   # matches training; 416 (a speed hack) crippled small-bee recall
 
@@ -11,7 +11,10 @@ detector:
 varroa_classifier:
   enabled: true
   model_path: cv_pipeline/weights/varroa_cls.pt
-  conf_threshold: 0.5
+  conf_threshold: 0.85
+  min_crop_size: 24
+  vote_window: 5
+  min_track_hits: 2
 
 tracker:
   track_buffer: 30
@@ -25,6 +28,8 @@ analytics:
   warning_score: 40
 
 visualize:
+  draw_trails: false
+  max_trail_length: 20
   colors:
     bee: [0, 200, 0]
     pollen_bee: [0, 220, 255]

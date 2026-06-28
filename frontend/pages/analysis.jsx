@@ -10,9 +10,12 @@ import {
   RotateCcw,
   ArrowRight,
   Activity,
+  ScanSearch,
+  ShieldAlert,
 } from 'lucide-react';
 import UploadVideo from '../components/UploadVideo';
 import UploadImage from '../components/UploadImage';
+import UploadVarroa from '../components/UploadVarroa';
 import VideoPlayer from '../components/VideoPlayer';
 import StatsPanel from '../components/StatsPanel';
 import HealthSummary from '../components/HealthSummary';
@@ -25,6 +28,7 @@ import ClassLegend from '../components/ClassLegend';
 const TABS = [
   { id: 'video', label: 'Video', icon: Video },
   { id: 'image', label: 'Image', icon: ImageIcon },
+  { id: 'varroa', label: 'Varroa', icon: ScanSearch },
 ];
 
 export default function Analysis() {
@@ -38,6 +42,7 @@ export default function Analysis() {
   const [timelineData, setTimelineData] = useState([]);    // array for ActivityTimeline
   const [annotatedVideoUrl, setAnnotatedVideoUrl] = useState(null);
   const [annotatedImageUrl, setAnnotatedImageUrl] = useState(null);
+  const [varroaData, setVarroaData] = useState(null);
   const [error, setError] = useState(null);
 
   // ─── Video handlers ───────────────────────────────────────────────────────
@@ -80,6 +85,8 @@ export default function Analysis() {
     setSummaryData(null);
     setTimelineData([]);
     setAnnotatedVideoUrl(null);
+    setAnnotatedImageUrl(null);
+    setVarroaData(null);
   }, []);
 
   // ─── Image handlers ───────────────────────────────────────────────────────
@@ -92,6 +99,7 @@ export default function Analysis() {
     setTimelineData([]);
     setAnnotatedVideoUrl(null);
     setAnnotatedImageUrl(null);
+    setVarroaData(null);
   }, []);
 
   const handleImageUploadComplete = useCallback((data) => {
@@ -100,6 +108,24 @@ export default function Analysis() {
     setSummaryData(data?.summary ?? null);
     setAnnotatedImageUrl(data?.annotated_image || null);
     setTimelineData([]); // single image — no timeline
+    setProcessingStatus('done');
+  }, []);
+
+  const handleVarroaUploadStart = useCallback(() => {
+    setProcessingStatus('uploading');
+    setError(null);
+    setResultData(null);
+    setSummaryData(null);
+    setTimelineData([]);
+    setAnnotatedVideoUrl(null);
+    setAnnotatedImageUrl(null);
+    setVarroaData(null);
+  }, []);
+
+  const handleVarroaUploadComplete = useCallback((data) => {
+    setResultData(data);
+    setVarroaData(data);
+    setTimelineData([]);
     setProcessingStatus('done');
   }, []);
 
@@ -118,6 +144,7 @@ export default function Analysis() {
     setTimelineData([]);
     setAnnotatedVideoUrl(null);
     setAnnotatedImageUrl(null);
+    setVarroaData(null);
     setError(null);
   }, []);
 
@@ -132,6 +159,7 @@ export default function Analysis() {
 
   const isVideoTab = activeTab === 'video';
   const isImageTab = activeTab === 'image';
+  const isVarroaTab = activeTab === 'varroa';
 
   return (
     <div className="relative min-h-screen">
@@ -147,7 +175,7 @@ export default function Analysis() {
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-ink-soft">
             Drop in a video or a still frame. Buzzlytics cleans up every frame, finds and
-            follows every bee, and hands back a full health report.
+            follows every bee, and can inspect close-up bee crops for varroa.
           </p>
         </div>
 
@@ -169,8 +197,8 @@ export default function Analysis() {
           ))}
         </div>
 
-        {/* ── Upload card (Video or Image tab) ─────────────────────────────── */}
-        {(isVideoTab || isImageTab) && (
+        {/* ── Upload card (Video, Image, or Varroa tab) ───────────────────── */}
+        {(isVideoTab || isImageTab || isVarroaTab) && (
           <motion.section
             key={activeTab}
             initial={{ opacity: 0, y: 20 }}
@@ -185,10 +213,10 @@ export default function Analysis() {
                 </div>
                 <div>
                   <h2 className="font-display text-xl font-semibold text-ink">
-                    {isVideoTab ? 'Footage upload' : 'Image upload'}
+                    {isVideoTab ? 'Footage upload' : isImageTab ? 'Image upload' : 'Varroa crop upload'}
                   </h2>
                   <p className="text-sm text-ink-faint">
-                    Step one · choose {isVideoTab ? 'a video' : 'an image'}
+                    Step one · choose {isVideoTab ? 'a video' : isImageTab ? 'an image' : 'a close-up crop'}
                   </p>
                 </div>
               </div>
@@ -214,6 +242,14 @@ export default function Analysis() {
                     uploading={processingStatus === 'uploading'}
                     onUploadStart={handleImageUploadStart}
                     onUploadComplete={handleImageUploadComplete}
+                    onUploadError={handleUploadError}
+                  />
+                )}
+                {isVarroaTab && (
+                  <UploadVarroa
+                    uploading={processingStatus === 'uploading'}
+                    onUploadStart={handleVarroaUploadStart}
+                    onUploadComplete={handleVarroaUploadComplete}
                     onUploadError={handleUploadError}
                   />
                 )}
@@ -252,7 +288,7 @@ export default function Analysis() {
         )}
 
         {/* ── Results dashboard (shown once analysis is done) ──────────────── */}
-        {processingStatus === 'done' && summaryData && (
+        {processingStatus === 'done' && (summaryData || varroaData) && (
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -331,30 +367,92 @@ export default function Analysis() {
               </div>
             )}
 
-            {/* Stats counters */}
-            <div className="card p-7 md:p-8">
-              <div className="mb-7 flex items-center gap-3 border-b border-line pb-4">
-                <BarChart3 className="h-5 w-5 text-forest-700" />
-                <h2 className="font-display text-xl font-semibold text-ink">The numbers</h2>
+            {isVarroaTab && varroaData && (
+              <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+                <div className="card flex flex-col p-7 md:p-8 lg:col-span-2">
+                  <div className="mb-6 flex items-center justify-between border-b border-line pb-4">
+                    <div className="flex items-center gap-3">
+                      <ScanSearch className="h-5 w-5 text-forest-700" />
+                      <h2 className="font-display text-xl font-semibold text-ink">
+                        Close-up varroa inspection
+                      </h2>
+                    </div>
+                    <span className={`pill ${varroaData.prediction?.is_varroa ? 'text-clay' : 'text-forest-700'}`}>
+                      <span className={`h-2 w-2 rounded-full ${varroaData.prediction?.is_varroa ? 'bg-clay' : 'bg-forest-500'}`} />
+                      {varroaData.prediction?.is_varroa ? 'Varroa flagged' : 'No varroa flag'}
+                    </span>
+                  </div>
+                  {varroaData.annotated_image && (
+                    <img
+                      src={`data:image/jpeg;base64,${varroaData.annotated_image}`}
+                      alt="Varroa crop analysis"
+                      className="mx-auto h-auto max-h-[680px] w-full max-w-[420px] rounded-xl object-contain"
+                    />
+                  )}
+                </div>
+
+                <div className="card p-7 md:p-8">
+                  <div className="mb-6 flex items-center gap-3 border-b border-line pb-4">
+                    <ShieldAlert className="h-5 w-5 text-forest-700" />
+                    <h2 className="font-display text-xl font-semibold text-ink">Varroa result</h2>
+                  </div>
+                  <div className="space-y-5">
+                    <div>
+                      <div className="data-label mb-1.5">Model prediction</div>
+                      <div className="font-display text-4xl font-semibold capitalize text-ink">
+                        {varroaData.prediction?.label || 'Unknown'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="data-label mb-1.5">Confidence</div>
+                      <div className="font-display text-3xl font-semibold tabular text-ink">
+                        {`${((varroaData.prediction?.confidence || 0) * 100).toFixed(1)}%`}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="data-label mb-1.5">Reference mite count</div>
+                      <div className="font-display text-3xl font-semibold tabular text-ink">
+                        {varroaData.ground_truth ? varroaData.ground_truth.mite_count : 'N/A'}
+                      </div>
+                    </div>
+                    <p className="text-sm leading-relaxed text-ink-soft">
+                      This mode is for close-up bee crop inspection. For VarroaDataset samples,
+                      reference mite markings can be shown alongside the classifier result. For
+                      other crops, the highlighted region is an occlusion-based model focus estimate.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <StatsPanel data={summaryData} />
-            </div>
+            )}
+
+            {/* Stats counters */}
+            {!isVarroaTab && (
+              <div className="card p-7 md:p-8">
+                <div className="mb-7 flex items-center gap-3 border-b border-line pb-4">
+                  <BarChart3 className="h-5 w-5 text-forest-700" />
+                  <h2 className="font-display text-xl font-semibold text-ink">The numbers</h2>
+                </div>
+                <StatsPanel data={summaryData} />
+              </div>
+            )}
 
             {/* Activity timeline — video only (image passes [] which shows placeholder) */}
-            <div className="card p-7 md:p-8">
-              <div className="mb-6 flex items-center gap-3 border-b border-line pb-4">
-                <Activity className="h-5 w-5 text-forest-700" />
-                <h2 className="font-display text-xl font-semibold text-ink">
-                  Entrance activity
-                </h2>
+            {!isVarroaTab && (
+              <div className="card p-7 md:p-8">
+                <div className="mb-6 flex items-center gap-3 border-b border-line pb-4">
+                  <Activity className="h-5 w-5 text-forest-700" />
+                  <h2 className="font-display text-xl font-semibold text-ink">
+                    Entrance activity
+                  </h2>
+                </div>
+                <ActivityTimeline data={timelineData} metric="activity_ratio" />
               </div>
-              <ActivityTimeline data={timelineData} metric="activity_ratio" />
-            </div>
+            )}
 
             {/* Reset CTA */}
             <div className="flex justify-end pt-2">
               <button className="btn-honey" onClick={handleReset}>
-                Analyze another {isVideoTab ? 'clip' : 'image'}{' '}
+                Analyze another {isVideoTab ? 'clip' : isImageTab ? 'image' : 'crop'}{' '}
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>

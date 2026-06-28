@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections import defaultdict, deque
 from typing import Dict, Generator, List, Optional
 
 import cv2
@@ -97,7 +98,12 @@ class CVPipeline:
             self.tracker = None
 
         self.analytics = AnalyticsEngine(config=cfg)
-        self.visualizer = Visualizer(color_map=color_map)
+        viz = cfg.get("visualize", {})
+        self.visualizer = Visualizer(
+            color_map=color_map,
+            draw_trails=bool(viz.get("draw_trails", True)),
+            max_trail_length=int(viz.get("max_trail_length", 60)),
+        )
         self.motion = MotionDetector(**cfg["motion"])
 
         # Stage-2 varroa classifier (per-bee healthy/varroa). Inert if the
@@ -112,6 +118,14 @@ class CVPipeline:
             )
             if vc.get("enabled", True)
             else None
+        )
+        self._varroa_min_crop_size = int(vc.get("min_crop_size", 2))
+        self._varroa_min_track_hits = max(1, int(vc.get("min_track_hits", 1)))
+        self._varroa_vote_window = max(
+            self._varroa_min_track_hits, int(vc.get("vote_window", 1))
+        )
+        self._varroa_votes = defaultdict(
+            lambda: deque(maxlen=self._varroa_vote_window)
         )
         pp = cfg["preprocess"]
         self._white_balance = pp["white_balance"]
@@ -240,9 +254,18 @@ class CVPipeline:
             x2 = max(0, min(x2, w))
             y1 = max(0, min(y1, h - 1))
             y2 = max(0, min(y2, h))
-            if x2 - x1 < 2 or y2 - y1 < 2:
+            if (
+                x2 - x1 < self._varroa_min_crop_size
+                or y2 - y1 < self._varroa_min_crop_size
+            ):
                 continue
-            if self.varroa_classifier.is_varroa(frame[y1:y2, x1:x2]):
+            is_varroa = self.varroa_classifier.is_varroa(frame[y1:y2, x1:x2])
+            track_id = getattr(obj, "track_id", None)
+            if track_id is not None:
+                votes = self._varroa_votes[int(track_id)]
+                votes.append(is_varroa)
+                is_varroa = sum(votes) >= self._varroa_min_track_hits
+            if is_varroa:
                 obj.class_name = "varroa_bee"
 
     def process_video(
@@ -393,5 +416,6 @@ class CVPipeline:
         """Reset all pipeline state including tracker and analytics."""
         if self.tracker is not None:
             self.tracker.reset()
+        self._varroa_votes.clear()
         self.analytics.reset()
         logger.info("CV Pipeline state reset.")

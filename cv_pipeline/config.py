@@ -20,9 +20,17 @@ logger = logging.getLogger(__name__)
 _DEFAULTS: Dict[str, Any] = {
     "detector": {
         "model_path": "cv_pipeline/weights/best.pt",
-        "conf_threshold": 0.25,
+        "conf_threshold": 0.4,
         "iou_threshold": 0.45,
         "imgsz": 640,
+    },
+    "varroa_classifier": {
+        "enabled": True,
+        "model_path": "cv_pipeline/weights/varroa_cls.pt",
+        "conf_threshold": 0.85,
+        "min_crop_size": 24,
+        "vote_window": 5,
+        "min_track_hits": 2,
     },
     "tracker": {"track_buffer": 30, "match_thresh": 0.8},
     "analytics": {
@@ -33,6 +41,8 @@ _DEFAULTS: Dict[str, Any] = {
         "warning_score": 40,
     },
     "visualize": {
+        "draw_trails": False,
+        "max_trail_length": 20,
         "colors": {
             "bee": [0, 200, 0],
             "pollen_bee": [0, 220, 255],

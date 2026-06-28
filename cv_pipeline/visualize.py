@@ -42,6 +42,8 @@ class Visualizer:
     def __init__(
         self,
         color_map: Optional[Dict[str, Tuple[int, int, int]]] = None,
+        draw_trails: bool = True,
+        max_trail_length: int = 60,
     ) -> None:
         self.color_map: Dict[str, Tuple[int, int, int]] = (
             dict(DEFAULT_COLOR_MAP)
@@ -55,7 +57,8 @@ class Visualizer:
         self._font_thickness = 1
         self._box_thickness = 2
         self._trail_thickness = 1
-        self._max_trail_length = 60
+        self._draw_trails = draw_trails
+        self._max_trail_length = max(0, int(max_trail_length))
 
     def _get_color(self, class_name: str) -> Tuple[int, int, int]:
         """Get the BGR color for a class name.
@@ -186,7 +189,7 @@ class Visualizer:
             )
 
         # Draw trajectory trails
-        if track_histories is not None:
+        if self._draw_trails and track_histories is not None:
             for track_id, points in track_histories.items():
                 if len(points) < 2:
                     continue

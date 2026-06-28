@@ -23,3 +23,13 @@ export const imageApi = {
   },
 };
 
+export const varroaApi = {
+  process: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axios.post(`${API_BASE}/varroa`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+};
+

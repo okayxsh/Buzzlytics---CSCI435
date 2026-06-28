@@ -3,7 +3,7 @@ detector:
   model_path: cv_pipeline/weights/best.pt
   conf_threshold: 0.4
   iou_threshold: 0.45
-  imgsz: 640   # matches training; 416 (a speed hack) crippled small-bee recall
+  imgsz: 960   # higher = catches more small/packed bees (640->960 ~ +40% recall on dense frames). Lower to 640 for faster video.
 
 # Stage-2 per-bee varroa classifier (healthy vs varroa). Runs on each
 # detected bee crop and upgrades its label to varroa_bee when infected.

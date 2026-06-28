@@ -173,7 +173,10 @@ class CVPipeline:
         if frame.size == 0:
             raise ValueError("Cannot process an empty frame")
 
-        # Step 1: Preprocess
+        # Step 1: Preprocess — used ONLY for motion detection. The detector
+        # was fine-tuned on raw images, so feeding it CLAHE/white-balanced
+        # frames hurts recall (~30% fewer detections in testing). Detection
+        # and tracking therefore run on the RAW frame.
         processed = preprocess_frame(
             frame,
             white_balance=self._white_balance,
@@ -181,22 +184,23 @@ class CVPipeline:
             denoise_strength=self._denoise_strength,
         )
 
-        # Step 1b: Motion detection
+        # Step 1b: Motion detection (on the stabilised/preprocessed frame)
         motion_result = self.motion.process(processed)
 
-        # Step 2: Single inference path — either track OR detect, never both
+        # Step 2: Single inference path — either track OR detect, never both.
+        # Run on the RAW frame to match the model's training distribution.
         detections: List[Detection] = []
         tracks: List[Track] = []
         track_histories: Optional[Dict[int, List]] = None
 
         if self.tracker is not None:
             # Tracker is the sole inference path (model.track() inside)
-            tracks = self.tracker.update(processed, self.model_path)
+            tracks = self.tracker.update(frame, self.model_path)
             track_histories = self.tracker.get_track_histories()
             # detections stays empty — analytics/visualize use tracks
         else:
             # Detection-only path
-            detections = self.detector.detect(processed)
+            detections = self.detector.detect(frame)
 
         # Step 2c: per-bee varroa classification (stage 2). Crop each detected
         # bee from the ORIGINAL frame and upgrade its label to "varroa_bee"

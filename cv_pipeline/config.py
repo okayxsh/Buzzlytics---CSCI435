@@ -56,7 +56,7 @@ _DEFAULTS: Dict[str, Any] = {
         "detect_shadows": True,
         "kernel_size": 3,
     },
-    "video": {"frame_skip": 2},
+    "video": {"frame_skip": 2, "max_seconds": 10},
     "preprocess": {
         "white_balance": True,
         "clahe_clip_limit": 2.0,

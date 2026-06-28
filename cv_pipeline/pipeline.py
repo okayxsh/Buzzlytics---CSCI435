@@ -134,7 +134,11 @@ class CVPipeline:
         self._denoise_strength = pp["denoise_strength"]
 
         # frame_skip: process every Nth frame; <=1 means every frame
-        self._frame_skip: int = max(1, int(cfg.get("video", {}).get("frame_skip", 1)))
+        vid_cfg = cfg.get("video", {})
+        self._frame_skip: int = max(1, int(vid_cfg.get("frame_skip", 1)))
+        # Cap how much of an uploaded video gets processed (seconds). 0/None
+        # means no cap. Keeps CPU processing time bounded on long uploads.
+        self._max_seconds: float = float(vid_cfg.get("max_seconds", 10) or 0)
 
     def process_frame(
         self,
@@ -345,6 +349,11 @@ class CVPipeline:
         if fps <= 0:
             fps = 30.0
 
+        # Cap processing to the first ``max_seconds`` of footage (0 = no cap).
+        max_frames = int(fps * self._max_seconds) if self._max_seconds else 0
+        if max_frames and (total_frames <= 0 or max_frames < total_frames):
+            total_frames = max_frames
+
         frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -367,6 +376,8 @@ class CVPipeline:
 
         try:
             while True:
+                if max_frames and frame_number >= max_frames:
+                    break  # reached the max_seconds cap
                 ret, frame = cap.read()
                 if not ret:
                     break

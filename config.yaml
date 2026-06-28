@@ -1,13 +1,13 @@
 # Buzzlytics configuration — single source of truth for tunable values.
 detector:
   model_path: cv_pipeline/weights/best.pt
-  conf_threshold: 0.4
+  conf_threshold: 0.25   # in-domain profile (Vietnamese VnPollenBee footage). Raise to 0.4 for out-of-domain.
   iou_threshold: 0.45
   imgsz: 960   # higher = catches more small/packed bees (640->960 ~ +40% recall on dense frames). Lower to 640 for faster video.
   # pollen_bee is the minority/hard class and over-fires on out-of-domain bees
-  # (e.g. golden Apis mellifera abdomens read as pollen). Require higher
-  # confidence for pollen; below this a "pollen_bee" is demoted to "bee".
-  pollen_min_conf: 0.55
+  # (e.g. golden Apis mellifera abdomens read as pollen). Below this a
+  # "pollen_bee" is demoted to "bee". 0.3 = in-domain; raise to ~0.55 out-of-domain.
+  pollen_min_conf: 0.3
 
 # Stage-2 per-bee varroa classifier (healthy vs varroa). Runs on each
 # detected bee crop and upgrades its label to varroa_bee when infected.
@@ -47,6 +47,7 @@ motion:
 
 video:
   frame_skip: 5
+  max_seconds: 10   # only the first N seconds of an uploaded video are processed (0 = no cap)
 
 preprocess:
   white_balance: true

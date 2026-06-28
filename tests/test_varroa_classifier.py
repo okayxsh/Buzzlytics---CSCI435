@@ -4,24 +4,47 @@ import numpy as np
 from cv_pipeline.varroa_classifier import VarroaClassifier
 
 
-def _clf_with_fake_model(top_name, conf):
-    """Build a VarroaClassifier whose model is a stub returning (name, conf)."""
+class _Arr:
+    def __init__(self, vec):
+        self._v = vec
+
+    def cpu(self):
+        return self
+
+    def numpy(self):
+        return np.array(self._v)
+
+
+class _Probs:
+    def __init__(self, top1, conf, vec):
+        self.top1 = top1
+        self.top1conf = conf
+        self.data = _Arr(vec)
+
+
+class _Res:
+    def __init__(self, probs):
+        self.names = {0: "healthy", 1: "varroa"}
+        self.probs = probs
+
+
+class _FakeModel:
+    def __init__(self, res):
+        self._res = res
+
+    def __call__(self, crop, verbose=False):
+        return [self._res]
+
+
+def _clf_with_fake_model(top_name, conf, threshold=0.5):
+    """Build a VarroaClassifier whose model is a 2-class stub."""
     clf = VarroaClassifier.__new__(VarroaClassifier)
-    clf.conf_threshold = 0.5
-
-    class _Probs:
-        top1 = 0
-        top1conf = conf
-
-    class _Res:
-        names = {0: top_name}
-        probs = _Probs()
-
-    class _FakeModel:
-        def __call__(self, crop, verbose=False):
-            return [_Res()]
-
-    clf._model = _FakeModel()
+    clf.conf_threshold = threshold
+    top1 = 1 if top_name == "varroa" else 0
+    vec = [0.0, 0.0]
+    vec[top1] = conf
+    vec[1 - top1] = 1.0 - conf
+    clf._model = _FakeModel(_Res(_Probs(top1, conf, vec)))
     return clf
 
 
@@ -53,3 +76,11 @@ def test_empty_or_tiny_crop_is_safe():
     clf = _clf_with_fake_model("varroa", 0.99)
     assert clf.is_varroa(np.zeros((0, 0, 3), dtype=np.uint8)) is False
     assert clf.is_varroa(np.zeros((1, 1, 3), dtype=np.uint8)) is False
+
+
+def test_classify_returns_detail_dict():
+    clf = _clf_with_fake_model("varroa", 0.9)
+    out = clf.classify(np.zeros((10, 10, 3), dtype=np.uint8))
+    assert out["label"] == "varroa"
+    assert out["is_varroa"] is True
+    assert round(out["confidence"], 2) == 0.9

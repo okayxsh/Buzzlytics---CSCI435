@@ -78,6 +78,10 @@ class CVPipeline:
         }
 
         imgsz = det.get("imgsz", 640)
+        self._min_box_width = float(det.get("min_box_width", 0))
+        self._min_box_height = float(det.get("min_box_height", 0))
+        self._min_box_area_pct = float(det.get("min_box_area_pct", 0.0))
+        self._max_box_aspect_ratio = float(det.get("max_box_aspect_ratio", 0.0))
 
         self.detector = BeeDetector(
             model_path=self.model_path,
@@ -94,6 +98,9 @@ class CVPipeline:
                 imgsz=imgsz,
                 track_buffer=trk.get("track_buffer", 30),
                 match_thresh=trk.get("match_thresh", 0.8),
+                track_high_thresh=trk.get("track_high_thresh", self.conf_threshold),
+                track_low_thresh=trk.get("track_low_thresh", 0.1),
+                new_track_thresh=trk.get("new_track_thresh", self.conf_threshold),
             )
         else:
             self.tracker = None
@@ -201,11 +208,13 @@ class CVPipeline:
         if self.tracker is not None:
             # Tracker is the sole inference path (model.track() inside)
             tracks = self.tracker.update(frame, self.model_path)
+            tracks = self._filter_objects(tracks, frame.shape[:2])
             track_histories = self.tracker.get_track_histories()
             # detections stays empty — analytics/visualize use tracks
         else:
             # Detection-only path
             detections = self.detector.detect(frame)
+            detections = self._filter_objects(detections, frame.shape[:2])
 
         # Step 2b: demote low-confidence pollen_bee -> bee. Pollen is the
         # minority/hard class and over-fires on out-of-domain bees; requiring
@@ -295,6 +304,29 @@ class CVPipeline:
                 is_varroa = sum(votes) >= self._varroa_min_track_hits
             if is_varroa:
                 obj.class_name = "varroa_bee"
+
+    def _filter_objects(self, objs: List, frame_hw: tuple[int, int]) -> List:
+        """Drop implausible boxes that are common on wood grain clutter."""
+        if not objs:
+            return objs
+
+        frame_h, frame_w = frame_hw
+        min_area = self._min_box_area_pct * float(frame_w * frame_h)
+        out = []
+        for obj in objs:
+            x1, y1, x2, y2 = [float(v) for v in obj.bbox]
+            bw = max(0.0, x2 - x1)
+            bh = max(0.0, y2 - y1)
+            if bw < self._min_box_width or bh < self._min_box_height:
+                continue
+            if min_area > 0 and bw * bh < min_area:
+                continue
+            if self._max_box_aspect_ratio > 0 and bw > 0 and bh > 0:
+                aspect = max(bw / bh, bh / bw)
+                if aspect > self._max_box_aspect_ratio:
+                    continue
+            out.append(obj)
+        return out
 
     def process_video(
         self,

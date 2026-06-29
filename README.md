@@ -1,6 +1,6 @@
 # Buzzlytics: Computer Vision Hive Health Dashboard
 
-Buzzlytics is an analytical, automated monitoring platform that converts video feeds of a beehive entrance into real-time colony health diagnostics. By eliminating manual hive inspections and visual counts, the platform delivers precise, automated quantitative tracking parameters for beekeepers to prevent colony collapse.
+Buzzlytics is a computer-vision hive health prototype that converts uploaded hive entrance videos, still frames, and close-up bee crops into annotated analysis results. It combines bee detection, pollen-return estimation, tracking, motion analysis, and Varroa crop inspection in a local FastAPI + Next.js application.
 
 ---
 
@@ -23,11 +23,11 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 ## Features
 
 - **Video Upload Processing**: Upload pre-recorded hive videos for batch analysis with annotated output and health reports
-- **Live Webcam Streaming**: Real-time bee monitoring via WebSocket-based frame streaming with instant annotations
-- **Two-Stage Bee Analysis**: A YOLOv8 detector boxes every bee as bee/pollen-carrying; a second classifier marks each detected bee as varroa-infected or healthy
+- **WebSocket Frame Endpoint**: Backend support for live frame processing via `/ws/webcam` for future webcam UI work
+- **Two-Stage Bee Analysis**: A YOLOv8 detector boxes every bee as bee/pollen-carrying; a separate close-up Varroa model classifies crops or, when detector weights are installed, detects mite boxes directly
 - **Multi-Object Tracking**: ByteTrack-based persistent identity tracking across video frames
 - **Health Score Engine**: Algorithmic hive health scoring (0-100) with clinical status classification
-- **Real-Time Analytics Dashboard**: Live metrics panel with counts, rates, and trend indicators
+- **Analytics Dashboard**: Metrics panel with counts, pollen return rate, activity rate, health score, and trend indicators
 
 ---
 
@@ -57,25 +57,24 @@ Buzzlytics is an analytical, automated monitoring platform that converts video f
 5. Frontend polls `GET /api/video/status/{id}` until complete
 6. Annotated video and analytics summary are displayed
 
-**Live Webcam Flow:**
-1. Frontend captures webcam frames at ~10 FPS
-2. Each frame is base64-encoded and sent via WebSocket
-3. Backend decodes frame and runs CV Pipeline
-4. Annotated frame and analytics are sent back via WebSocket
-5. Frontend renders annotated frame on canvas and updates dashboard
+**Backend Live Frame Flow (prototype endpoint):**
+1. A client sends base64-encoded camera frames via WebSocket
+2. Backend decodes each frame and runs the CV pipeline
+3. Annotated frame and analytics are sent back via WebSocket
+4. The current shipped frontend focuses on uploaded video, uploaded image, and Varroa crop workflows
 
 ---
 
 ## Vision Capabilities
 
-The system integrates the following four computer vision capabilities:
+The app integrates the following four computer vision capabilities:
 
 | # | Capability | Implementation | Module |
 |---|-----------|---------------|--------|
-| 1 | **Image Enhancement** | CLAHE (Contrast Limited Adaptive Histogram Equalization) in LAB color space + Non-Local Means denoising | `cv_pipeline/preprocess.py` |
-| 2 | **Object Detection** | Fine-tuned YOLOv8 with 3 bee classes | `cv_pipeline/detector.py` |
-| 3 | **Object Tracking** | ByteTrack multi-object tracker via ultralytics | `cv_pipeline/tracker.py` |
-| 4 | **Video Processing** | Full video pipeline with frame-by-frame processing, moving object tracking, and health analytics | `cv_pipeline/pipeline.py` |
+| 1 | **Object Detection** | YOLO detects bees and pollen-carrying bees | `cv_pipeline/detector.py` |
+| 2 | **Object Tracking** | Tracker assigns persistent IDs and counts bees over time | `cv_pipeline/tracker.py` |
+| 3 | **Video Processing / Moving Object Detection** | Frame-by-frame video analysis with optional motion mask/background modelling | `cv_pipeline/pipeline.py`, `cv_pipeline/motion.py` |
+| 4 | **Object Recognition / Classification** | Varroa classifier/detector identifies healthy vs infected bee crops | `cv_pipeline/varroa_classifier.py`, `cv_pipeline/varroa_detector.py` |
 
 **Two-stage taxonomy:**
 - Stage 1 — detector (boxes every bee): `bee` (0), `pollen_bee` (1)
@@ -85,6 +84,17 @@ The system integrates the following four computer vision capabilities:
 Why two stages: the varroa mite is tiny and only annotated as single-bee classification crops
 (VarroaDataset), not boxed bees-in-scene — so forcing it into detection ruins per-bee localization.
 This detect-then-classify design follows IntelliBeeHive / BeeAlarmed.
+
+To upgrade close-up Varroa from classification to true mite detection:
+
+```bash
+python training/make_varroa_detection_dataset.py --source <varroa-folder-with-gt_one.csv> --out datasets/varroa_det
+python training/train_varroa_detector.py --data datasets/varroa_det/varroa_mite.yaml --epochs 80 --imgsz 960
+```
+
+Then copy `training/runs/varroa_mite_detector/weights/best.pt` to
+`cv_pipeline/weights/varroa_det.pt`. The `/api/varroa` route will use detector
+mode automatically when that file exists; otherwise it falls back to classifier mode.
 
 ---
 
@@ -104,7 +114,7 @@ This detect-then-classify design follows IntelliBeeHive / BeeAlarmed.
 - **Python** 3.10 or higher
 - **Node.js** 18 or higher
 - **npm** 9 or higher
-- **Webcam** (for live streaming feature)
+- **Webcam** (optional, only if building against the backend WebSocket frame endpoint)
 - **CUDA-capable GPU** (recommended for real-time performance, but CPU works)
 
 ---
@@ -144,10 +154,11 @@ cd ..
 
 ### 4. Model weights (already included)
 
-The trained two-stage models ship with the repo, so it runs out of the box:
+The trained Buzzlytics models ship with the repo, so it runs out of the box:
 
 - `cv_pipeline/weights/best.pt` — stage-1 detector (`bee`, `pollen_bee`)
 - `cv_pipeline/weights/varroa_cls.pt` — stage-2 varroa classifier (`healthy`, `varroa`)
+- `cv_pipeline/weights/varroa_det.pt` — close-up Varroa mite detector (`mite`)
 
 No download or training needed. (To retrain, see [Model Training](#model-training) and drop the new
 weights at those same paths.) If `best.pt` is ever missing, the app falls back to a generic YOLOv8
@@ -263,8 +274,10 @@ The builder produces **two** datasets from two public sources (no API key needed
 
 - **Detection** (stage 1) from **VnPollenBee** ([HUST ComVis](https://comvis-hust.github.io/datasets/pollenbee.html)) —
   LabelMe polygons → `datasets/data/{train,valid,test}`. `nonpollenbee` → `bee`, `pollenbee` → `pollen_bee`.
-- **Varroa classification** (stage 2) from **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) —
+- **Varroa classification** (fallback health check) from **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) —
   single-bee crops sorted into `datasets/varroa_cls/{train,val,test}/{healthy,varroa}/`.
+- **Varroa mite detection** (close-up crop detector) from VarroaDataset coordinate labels —
+  YOLO mite boxes under `datasets/varroa_det/{train,valid,test}`.
 
 ```bash
 python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
@@ -273,7 +286,8 @@ python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
 The detection config is written to `datasets/data/bee_dataset.yaml`. The end-to-end path is two Colab
 notebooks: run `training/build_dataset_colab.ipynb` once (builds both zips into your Drive), then
 `training/colab_train.ipynb` (trains **both** the detector and the varroa classifier).
-Drop `best.pt` → `cv_pipeline/weights/best.pt` and `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`.
+Drop `best.pt` → `cv_pipeline/weights/best.pt`, `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`,
+and the close-up mite detector weights → `cv_pipeline/weights/varroa_det.pt`.
 
 ### Label Format (YOLO)
 
@@ -287,7 +301,9 @@ All values are normalized to [0, 1]. Detection class IDs:
 - `0` = bee
 - `1` = pollen_bee
 
-(Varroa is not a detection label — the stage-2 classifier sorts crops into `healthy`/`varroa` folders.)
+Varroa is not a label in the entrance-frame bee detector. Close-up mite detection is handled by
+the separate `varroa_det.pt` model, while the crop classifier remains available as a fallback
+`healthy`/`varroa` health check.
 
 ### Training
 
@@ -332,6 +348,7 @@ When starting the backend, the pipeline will automatically detect and use `custo
 | `GET` | `/api/video/result/{video_id}` | Stream the annotated video |
 | `GET` | `/api/video/results` | List all processed videos |
 | `DELETE` | `/api/video/result/{video_id}` | Delete a processed video |
+| `POST` | `/api/varroa` | Analyze a close-up bee crop with the Varroa classifier or YOLO mite detector |
 
 ### WebSocket Endpoint
 
@@ -371,24 +388,23 @@ Receive (server to client):
 
 ## User Story
 
-**As a beekeeper**, I want to monitor the health of my beehives remotely using video feeds so that I can detect problems early and prevent colony collapse without frequent manual inspections.
+**As a beekeeper**, I want to analyze hive entrance footage and close-up bee crops so that I can turn visual inspection into repeatable evidence about activity, pollen return, and Varroa risk.
 
 **Scenario 1 - Video Upload Analysis:**
 I upload a video of my hive entrance recorded during the morning foraging period. The system processes the video and shows me:
-- An annotated video with bounding boxes around each detected bee, color-coded by health status
-- A count of healthy bees, pollen-carrying bees, varroa-infected bees, and wasps
+- An annotated video with bounding boxes around each detected bee and pollen-carrying bee
+- A count of detected bees and pollen-carrying bees, plus motion/activity trends
 - A health score of 75/100 with a "Healthy" classification
 - A recommendation noting good foraging activity based on the pollen-carrying ratio
 
-**Scenario 2 - Live Webcam Monitoring:**
-I connect my webcam pointed at the hive entrance. The system processes frames in real-time and:
-- Displays a live annotated video feed with bounding boxes and tracking trails
-- Continuously updates bee counts and health metrics
-- Alerts me when the varroa infection rate exceeds 15%, suggesting immediate mite treatment
-- Shows an activity rate below 30%, warning of potential queen issues
+**Scenario 2 - Close-up Varroa Crop Inspection:**
+I upload a close-up crop of a bee. The system processes the crop and:
+- Predicts whether the crop shows Varroa evidence
+- Displays detector confidence and any mite boxes found
+- Shows reference mite count when dataset annotations are available
+- Falls back to crop-level healthy/Varroa classification if detector weights are unavailable
 
 **Value Delivered:**
-- Eliminates the need for daily physical hive inspections
 - Provides quantitative health data instead of subjective visual assessment
-- Enables early detection of varroa mite infestations before they cause colony collapse
+- Supports Varroa screening through a dedicated close-up crop workflow
 - Tracks foraging activity trends over time to identify declining hive productivity

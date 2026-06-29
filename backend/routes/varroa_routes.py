@@ -1,4 +1,4 @@
-"""Close-up varroa crop classification endpoint."""
+"""Varroa crop detection/classification endpoint."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from cv_pipeline.config import load_config
 from cv_pipeline.varroa_classifier import VarroaClassifier
+from cv_pipeline.varroa_detector import MiteDetection, VarroaMiteDetector
 
 router = APIRouter(prefix="/api/varroa", tags=["varroa"])
 
@@ -47,6 +48,20 @@ def _get_classifier() -> VarroaClassifier:
     return VarroaClassifier(
         model_path=vc.get("model_path", "cv_pipeline/weights/varroa_cls.pt"),
         conf_threshold=vc.get("conf_threshold", 0.85),
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_detector() -> VarroaMiteDetector:
+    cfg = load_config()
+    vd = cfg.get("varroa_detector", {})
+    if not vd.get("enabled", True):
+        return VarroaMiteDetector(model_path="")
+    return VarroaMiteDetector(
+        model_path=vd.get("model_path", "cv_pipeline/weights/varroa_det.pt"),
+        conf_threshold=vd.get("conf_threshold", 0.35),
+        iou_threshold=vd.get("iou_threshold", 0.45),
+        imgsz=vd.get("imgsz", 960),
     )
 
 
@@ -118,11 +133,39 @@ def _draw_varroa_annotation(
     prediction: Dict[str, object],
     ground_truth: Optional[Dict[str, object]],
     focus_box: Optional[List[int]] = None,
+    detections: Optional[List[MiteDetection]] = None,
 ) -> np.ndarray:
     annotated = frame.copy()
     h, w = annotated.shape[:2]
 
-    if ground_truth:
+    if detections:
+        for det in detections:
+            x1, y1, x2, y2 = [int(round(float(value))) for value in det.bbox]
+            x1 = max(0, min(w - 1, x1))
+            x2 = max(0, min(w - 1, x2))
+            y1 = max(0, min(h - 1, y1))
+            y2 = max(0, min(h - 1, y2))
+            cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 0, 255), 3)
+            label = f"mite {det.confidence:.2f}"
+            label_y = max(16, y1 - 5)
+            cv2.rectangle(
+                annotated,
+                (x1, label_y - 16),
+                (min(w - 1, x1 + 82), label_y + 3),
+                (0, 0, 255),
+                -1,
+            )
+            cv2.putText(
+                annotated,
+                label,
+                (x1 + 3, label_y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
+    elif ground_truth:
         for box in ground_truth.get("boxes", []):
             x1, y1, x2, y2 = [int(round(float(value))) for value in box]
             x1 = max(0, min(w - 1, x1))
@@ -257,14 +300,40 @@ async def process_varroa_crop(file: UploadFile = File(...)) -> Dict[str, Any]:
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
+    detector = _get_detector()
     classifier = _get_classifier()
-    if not classifier.available:
-        raise HTTPException(status_code=500, detail="Varroa classifier weights are unavailable")
-
-    prediction = classifier.classify(frame)
     ground_truth = _find_ground_truth(file.filename or "")
-    focus_box = None if ground_truth else _estimate_focus_box(classifier, frame, prediction)
-    annotated = _draw_varroa_annotation(frame, prediction, ground_truth, focus_box)
+
+    detections: List[MiteDetection] = []
+    if detector.available:
+        detections = detector.detect(frame)
+        max_conf = max((det.confidence for det in detections), default=0.0)
+        prediction = {
+            "label": "varroa" if detections else "healthy",
+            "confidence": max_conf,
+            "scores": {"varroa": max_conf, "healthy": 1.0 - max_conf},
+            "is_varroa": bool(detections),
+            "threshold": detector.conf_threshold,
+            "method": "detector",
+        }
+        focus_box = None
+    else:
+        if not classifier.available:
+            raise HTTPException(
+                status_code=500,
+                detail="Varroa detector/classifier weights are unavailable",
+            )
+        prediction = classifier.classify(frame)
+        prediction["method"] = "classifier"
+        focus_box = None if ground_truth else _estimate_focus_box(classifier, frame, prediction)
+
+    annotated = _draw_varroa_annotation(
+        frame,
+        prediction,
+        ground_truth,
+        focus_box,
+        detections=detections,
+    )
 
     try:
         annotated_b64 = _encode_frame_to_base64(annotated)
@@ -273,7 +342,17 @@ async def process_varroa_crop(file: UploadFile = File(...)) -> Dict[str, Any]:
 
     return {
         "prediction": prediction,
+        "detections": [
+            {
+                "bbox": det.bbox,
+                "confidence": det.confidence,
+                "class_id": det.class_id,
+                "class_name": det.class_name,
+            }
+            for det in detections
+        ],
         "ground_truth": ground_truth,
         "focus_box": focus_box,
         "annotated_image": annotated_b64,
     }
+

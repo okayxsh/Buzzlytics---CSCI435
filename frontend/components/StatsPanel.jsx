@@ -50,7 +50,7 @@ export default function StatsPanel({ data }) {
     },
     {
       key: 'pollen_pct',
-      label: 'Pollen %',
+      label: 'Pollen Return Rate',
       icon: Flower2,
       format: (v) => `${v.toFixed(1)}%`,
       getColor: (v) => (v > 5 ? 'healthy' : 'warning'),
@@ -62,7 +62,7 @@ export default function StatsPanel({ data }) {
     },
     {
       key: 'varroa_bees',
-      label: 'Varroa-Infected',
+      label: 'Crop Varroa Flags',
       icon: AlertTriangle,
       format: (v) => Math.round(v).toLocaleString(),
       getColor: (v, d) => {
@@ -91,7 +91,7 @@ export default function StatsPanel({ data }) {
     },
     {
       key: 'infection_rate',
-      label: 'Infection Rate',
+      label: 'Crop Flag Rate',
       icon: ShieldAlert,
       format: (v) => `${v.toFixed(1)}%`,
       getColor: (v) => (v > 15 ? 'critical' : v > 5 ? 'warning' : 'healthy'),

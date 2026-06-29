@@ -33,6 +33,13 @@ _DEFAULTS: Dict[str, Any] = {
         "vote_window": 5,
         "min_track_hits": 2,
     },
+    "varroa_detector": {
+        "enabled": True,
+        "model_path": "cv_pipeline/weights/varroa_det.pt",
+        "conf_threshold": 0.35,
+        "iou_threshold": 0.45,
+        "imgsz": 960,
+    },
     "tracker": {"track_buffer": 30, "match_thresh": 0.8},
     "analytics": {
         "varroa_penalty_per_pct": 2.5,

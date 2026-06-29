@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, ImageIcon, X } from 'lucide-react';
 import { imageApi } from '../services/api';
+import ProcessingInsight from './ProcessingInsight';
 
 const ACCEPTED_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.tiff'];
 const ACCEPTED_MIME_TYPES = [
@@ -167,6 +168,16 @@ export default function UploadImage({ onUploadStart, onUploadComplete, onUploadE
           </div>
           <div className="text-xs font-medium text-ink-soft">Analysing…</div>
         </div>
+      )}
+
+      {isUploading && (
+        <ProcessingInsight
+          messages={[
+            'Decoding the image and checking its dimensions.',
+            'Running YOLO on the original frame for bee and pollen boxes.',
+            'Preparing the annotated image and summary cards.',
+          ]}
+        />
       )}
 
       {/* Actions */}

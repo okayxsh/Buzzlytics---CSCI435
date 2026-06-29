@@ -22,6 +22,7 @@ runs/
 # ...but DO ship the trained Buzzlytics weights so the app runs on a fresh clone
 !cv_pipeline/weights/best.pt
 !cv_pipeline/weights/varroa_cls.pt
+!cv_pipeline/weights/varroa_det.pt
 
 # Dataset files (images, labels, videos)
 datasets/images/
@@ -29,6 +30,7 @@ datasets/labels/
 datasets/*.zip
 # Downloaded raw Roboflow exports + merged splits (large; keep only bee_dataset.yaml)
 datasets/raw/
+datasets/varroa_det/
 datasets/data/train/
 datasets/data/valid/
 datasets/data/test/
@@ -77,3 +79,6 @@ training/wandb/
 
 # Logs
 *.log
+node_modules
+.cache/
+tmp/

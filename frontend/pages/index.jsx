@@ -1,9 +1,20 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
-  Flower2, Bug, ShieldAlert, Activity, Radio,
-  Sparkles, ScanSearch, Route, LineChart, ArrowRight,
-  Cpu, Camera, HeartPulse, Crosshair, Leaf,
+  Activity,
+  ArrowRight,
+  Camera,
+  Cpu,
+  Crosshair,
+  Flower2,
+  HeartPulse,
+  Leaf,
+  LineChart,
+  Route,
+  ScanSearch,
+  ShieldAlert,
+  Sparkles,
+  Video,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -32,32 +43,77 @@ function Eyebrow({ children }) {
   );
 }
 
-const CLASSES = [
-  { icon: Activity, name: 'Bee', tone: 'text-forest-600', chip: 'bg-forest-50 border-forest-200', dot: 'bg-forest-500', desc: 'Healthy forager bees crawling and flying at the entrance — the baseline of a thriving colony.' },
-  { icon: Flower2, name: 'Pollen-laden', tone: 'text-honey-600', chip: 'bg-honey-50 border-honey-200', dot: 'bg-honey-400', desc: 'Returning bees carrying pollen loads, a direct read on foraging success.' },
-  { icon: ShieldAlert, name: 'Varroa-hit', tone: 'text-amberwarn', chip: 'bg-honey-50 border-honey-200', dot: 'bg-amberwarn', desc: 'Bees showing mite infestation — the single biggest driver of colony collapse.' },
+const SIGNALS = [
+  {
+    icon: Activity,
+    name: 'Entrance bees',
+    tone: 'text-forest-600',
+    chip: 'bg-forest-50 border-forest-200',
+    dot: 'bg-forest-500',
+    desc: 'Counts and tracks bees moving through the hive entrance to estimate activity and traffic.',
+  },
+  {
+    icon: Flower2,
+    name: 'Pollen return',
+    tone: 'text-honey-600',
+    chip: 'bg-honey-50 border-honey-200',
+    dot: 'bg-honey-400',
+    desc: 'Flags pollen-carrying bees when the footage matches the entrance-camera training view.',
+  },
+  {
+    icon: ShieldAlert,
+    name: 'Varroa crop check',
+    tone: 'text-amberwarn',
+    chip: 'bg-honey-50 border-honey-200',
+    dot: 'bg-amberwarn',
+    desc: 'Uses a dedicated close-up detector for mite boxes, with the crop classifier kept as a fallback health check.',
+  },
 ];
 
 const PIPELINE = [
-  { icon: Sparkles, step: '01', name: 'Clarify the frame', tech: 'CLAHE · denoise', desc: 'Adaptive histogram equalization and non-local-means denoising rescue detail from the harsh, shifting light of a hive entrance.' },
-  { icon: ScanSearch, step: '02', name: 'Find every bee', tech: 'YOLOv8 + classifier', desc: 'A fine-tuned detector locates each bee as bee or pollen-laden, then a varroa classifier checks each one for mites, frame after frame.' },
-  { icon: Route, step: '03', name: 'Follow them', tech: 'ByteTrack', desc: 'Persistent tracking gives every bee a stable identity, so counts stay honest and movement trails stay coherent.' },
-  { icon: LineChart, step: '04', name: 'Read the colony', tech: 'Health score', desc: 'Rates, ratios and trends fold into one clinical score with plain-language guidance you can act on.' },
+  {
+    icon: Sparkles,
+    step: '01',
+    name: 'Clean the scene',
+    tech: 'White balance + CLAHE',
+    desc: 'Balances color and contrast so entrance footage is easier for the detector to read.',
+  },
+  {
+    icon: ScanSearch,
+    step: '02',
+    name: 'Object detection',
+    tech: 'Fine-tuned YOLOv8',
+    desc: 'Locates bees and pollen-carrying bees in uploaded frames using weights trained for hive imagery.',
+  },
+  {
+    icon: Route,
+    step: '03',
+    name: 'Object tracking',
+    tech: 'ByteTrack IDs',
+    desc: 'Assigns persistent IDs and counts bees across the video instead of treating each frame as isolated.',
+  },
+  {
+    icon: LineChart,
+    step: '04',
+    name: 'Video + recognition',
+    tech: 'Motion + Varroa model',
+    desc: 'Runs frame-by-frame motion analysis and inspects close-up bee crops with the Varroa detector/classifier path.',
+  },
 ];
 
 const FEATURES = [
-  { icon: Camera, title: 'Recorded or still', body: 'Upload a clip or a still image for a full annotated report.' },
-  { icon: Crosshair, title: 'Bee-by-bee detail', body: 'Color-coded boxes and motion trails drawn on every frame of the output video.' },
-  { icon: HeartPulse, title: 'Clinical scoring', body: 'A 0–100 health index with Healthy / Watch / Critical bands and threshold alerts.' },
-  { icon: Activity, title: 'Live metrics', body: 'Counts, activity rate and infection rate update continuously as the feed runs.' },
-  { icon: Cpu, title: 'Runs anywhere', body: 'GPU-accelerated when you have one, perfectly happy on a plain CPU. No cloud required.' },
-  { icon: ShieldAlert, title: 'Early warning', body: 'Varroa and mortality thresholds surface trouble weeks ahead of a manual inspection.' },
+  { icon: Camera, title: 'Two upload paths', body: 'Analyze entrance videos or still frames without changing tools.' },
+  { icon: Crosshair, title: 'Visible evidence', body: 'Annotated output shows bees, pollen labels, and close-up Varroa crop results without mixing the workflows.' },
+  { icon: HeartPulse, title: 'Readable scoring', body: 'A 0-100 health score turns raw detections into a compact colony snapshot.' },
+  { icon: Activity, title: 'Activity timeline', body: 'Video results include per-frame movement and bee-count trends for the report.' },
+  { icon: Cpu, title: 'Local pipeline', body: 'FastAPI, OpenCV, and YOLO run locally with optional GPU acceleration.' },
+  { icon: ShieldAlert, title: 'Close-up Varroa mode', body: 'A dedicated crop workflow keeps mite inspection separate from wide entrance footage.' },
 ];
 
 const READOUT = [
   { k: 'Active', v: 184, tone: 'text-forest-600' },
   { k: 'Pollen', v: 47, tone: 'text-honey-600' },
-  { k: 'Varroa', v: 6, tone: 'text-amberwarn' },
+  { k: 'Flags', v: 0, tone: 'text-amberwarn' },
 ];
 
 export default function Home() {
@@ -65,7 +121,6 @@ export default function Home() {
     <div className="relative min-h-screen overflow-x-hidden">
       <Navbar />
 
-      {/* ---------- HERO ---------- */}
       <section className="relative overflow-hidden pt-[72px]">
         <HexField />
         <div className="relative mx-auto grid max-w-[1240px] items-center gap-16 px-5 py-20 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
@@ -77,7 +132,7 @@ export default function Home() {
               className="pill text-forest-700"
             >
               <span className="h-2 w-2 animate-pulse-soft rounded-full bg-honey-400" />
-              A computer-vision project · CSCI 435
+              Computer vision project - CSCI 435
             </motion.div>
 
             <h1 className="mt-7 font-display text-[3.1rem] font-medium leading-[1.02] tracking-tight text-ink sm:text-6xl lg:text-[4.4rem]">
@@ -87,7 +142,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.05 }}
               >
-                Listen to the
+                Read the hive
               </motion.span>
               <motion.span
                 className="block italic text-forest-700"
@@ -95,7 +150,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.16 }}
               >
-                hive’s pulse.
+                frame by frame.
               </motion.span>
             </h1>
 
@@ -105,9 +160,9 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.7, delay: 0.3 }}
             >
-              Buzzlytics watches the entrance of your hive and turns ordinary video into
-              living colony-health diagnostics — counting, tracking and scoring every bee so
-              you notice <span className="text-ink underline underline-honey decoration-honey-300">varroa, loss and decline</span> before the colony does.
+              Buzzlytics turns hive entrance footage into a readable computer-vision report:
+              bees are detected, pollen return is measured, movement is tracked, and close-up
+              crops can be checked for <span className="text-ink underline underline-honey decoration-honey-300">Varroa risk</span>.
             </motion.p>
 
             <motion.div
@@ -117,10 +172,10 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.42 }}
             >
               <Link href="/analysis" className="btn-primary">
-                Analyze a video <ArrowRight className="h-4 w-4" />
+                Analyze footage <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/analysis" className="btn-soft">
-                <Radio className="h-4 w-4" /> Open live feed
+                <ScanSearch className="h-4 w-4" /> Inspect a crop
               </Link>
             </motion.div>
 
@@ -130,35 +185,32 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.55 }}
             >
-              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-forest-400" /> 4 bee classes</span>
-              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-honey-400" /> Real-time tracking</span>
-              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-clay" /> No cloud needed</span>
+              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-forest-400" /> Video, image, crop</span>
+              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-honey-400" /> Four CV tasks</span>
+              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-clay" /> Local demo ready</span>
             </motion.div>
           </div>
 
-          {/* soft health reading card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 22 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="relative"
           >
-            {/* floating accent */}
             <div className="absolute -right-3 -top-5 z-10 hidden rotate-3 rounded-2xl border border-honey-200 bg-cream px-4 py-2.5 text-sm font-semibold text-honey-600 shadow-lift sm:block">
-              Hive 07 · this morning
+              Demo clip
             </div>
 
             <div className="card overflow-hidden p-0">
               <div className="flex items-center justify-between border-b border-line bg-sand px-6 py-4">
-                <span className="font-display text-lg font-semibold text-ink">Colony report</span>
+                <span className="font-display text-lg font-semibold text-ink">Analysis report</span>
                 <span className="flex items-center gap-2 text-sm font-semibold text-forest-700">
-                  <span className="h-2 w-2 animate-pulse-soft rounded-full bg-forest-500" /> Live
+                  <span className="h-2 w-2 animate-pulse-soft rounded-full bg-forest-500" /> Ready
                 </span>
               </div>
 
               <div className="px-6 py-7">
                 <div className="flex items-center gap-6">
-                  {/* score ring */}
                   <div className="relative h-28 w-28 shrink-0">
                     <svg viewBox="0 0 120 120" className="h-28 w-28 -rotate-90">
                       <circle cx="60" cy="60" r="52" fill="none" stroke="#EFE7D5" strokeWidth="12" />
@@ -176,15 +228,15 @@ export default function Home() {
                     </div>
                   </div>
                   <div>
-                    <div className="data-label">Overall health</div>
+                    <div className="data-label">Overall status</div>
                     <div className="mt-1 font-display text-2xl font-semibold text-forest-700">Healthy</div>
                     <p className="mt-1.5 text-sm leading-snug text-ink-soft">
-                      Strong foraging, mites well below the treatment line.
+                      Strong entrance activity with a clean close-up crop result.
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-7 grid grid-cols-4 overflow-hidden rounded-xl border border-line">
+                <div className="mt-7 grid grid-cols-3 overflow-hidden rounded-xl border border-line">
                   {READOUT.map((r, i) => (
                     <div key={r.k} className={`px-2 py-3.5 text-center ${i !== 0 ? 'border-l border-line' : ''} ${i % 2 ? 'bg-sand/60' : 'bg-cream'}`}>
                       <div className={`font-display text-2xl font-semibold tabular ${r.tone}`}>{r.v}</div>
@@ -195,8 +247,8 @@ export default function Home() {
 
                 <div className="mt-5 flex items-center justify-between text-sm text-ink-faint">
                   <span>Activity <span className="font-semibold text-ink-soft">71%</span></span>
-                  <span>Infection <span className="font-semibold text-ink-soft">2.4%</span></span>
-                  <span className="flex items-center gap-1.5 text-forest-600"><Camera className="h-3.5 w-3.5" /> recording</span>
+                  <span>Pollen <span className="font-semibold text-ink-soft">25.5%</span></span>
+                  <span className="flex items-center gap-1.5 text-forest-600"><Video className="h-3.5 w-3.5" /> uploaded</span>
                 </div>
               </div>
             </div>
@@ -204,22 +256,21 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- CAPABILITIES ---------- */}
       <section id="capabilities" className="relative py-24">
         <div className="mx-auto max-w-[1240px] px-5 md:px-8">
           <Reveal className="max-w-2xl">
-            <Eyebrow>What it sees</Eyebrow>
+            <Eyebrow>What it reads</Eyebrow>
             <h2 className="font-display text-4xl font-medium leading-tight text-ink md:text-[2.9rem]">
-              Four kinds of bee, <span className="italic text-forest-700">one honest read</span> on the colony.
+              Three visual signals, <span className="italic text-forest-700">one clearer story</span> about the hive.
             </h2>
             <p className="mt-5 text-lg leading-relaxed text-ink-soft">
-              Every bee crossing the entrance is sorted into one of four states. It is the
-              <em> mix</em> of those states — not the raw count — that tells you how the hive is really doing.
+              The system does not hide behind a single number. It shows the evidence:
+              entrance traffic, pollen return, motion over time, and close-up Varroa inspection.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {CLASSES.map((c, i) => (
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {SIGNALS.map((c, i) => (
               <Reveal key={c.name} delay={i * 0.08}>
                 <div className="card group h-full p-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lift">
                   <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl border ${c.chip}`}>
@@ -237,21 +288,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- HOW IT WORKS ---------- */}
       <section id="how" className="relative overflow-hidden border-y border-line bg-sand py-24">
         <div className="absolute inset-0 comb-tex opacity-40" aria-hidden="true" />
         <div className="relative mx-auto max-w-[1240px] px-5 md:px-8">
           <Reveal>
             <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
               <div className="max-w-xl">
-                <Eyebrow>From frame to verdict</Eyebrow>
+                <Eyebrow>From frame to finding</Eyebrow>
                 <h2 className="font-display text-4xl font-medium leading-tight text-ink md:text-[2.9rem]">
-                  A short journey, <span className="italic text-forest-700">run on every frame.</span>
+                  A compact pipeline, <span className="italic text-forest-700">built for defence.</span>
                 </h2>
               </div>
               <p className="max-w-sm text-ink-soft">
-                Four classic computer-vision stages, chained into one continuous loop that
-                keeps watching as long as the footage rolls.
+                The app demonstrates object detection, tracking, video processing, and Varroa recognition in one workflow.
               </p>
             </div>
           </Reveal>
@@ -283,13 +332,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- FEATURES ---------- */}
       <section className="relative py-24">
         <div className="mx-auto max-w-[1240px] px-5 md:px-8">
           <Reveal className="max-w-2xl">
-            <Eyebrow>Built for the apiary</Eyebrow>
+            <Eyebrow>Built for the demo</Eyebrow>
             <h2 className="font-display text-4xl font-medium leading-tight text-ink md:text-[2.9rem]">
-              Everything a keeper needs, <span className="italic text-forest-700">nothing they don’t.</span>
+              Clear outputs, <span className="italic text-forest-700">without overclaiming the model.</span>
             </h2>
           </Reveal>
 
@@ -311,25 +359,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- ABOUT ---------- */}
       <section id="about" className="relative overflow-hidden border-t border-line py-24">
         <div className="relative mx-auto grid max-w-[1240px] items-center gap-16 px-5 md:px-8 lg:grid-cols-2">
           <Reveal>
             <Eyebrow>Why we built it</Eyebrow>
             <h2 className="font-display text-4xl font-medium leading-tight text-ink md:text-[2.9rem]">
-              Bees feed a third of our plates — <span className="italic text-forest-700">and we still check them by hand.</span>
+              Hive checks are visual, slow, and easy to misread.
             </h2>
             <div className="mt-6 space-y-5 text-lg leading-relaxed text-ink-soft">
               <p>
-                Most keepers still diagnose hive health by cracking open boxes and counting
-                bees by eye. It is slow, disruptive, and trouble often shows up only once it
-                is too late to fix.
+                Most keepers still diagnose colony health by opening boxes and judging activity by eye.
+                It is useful, but disruptive, subjective, and hard to turn into repeatable evidence.
               </p>
               <p>
-                Buzzlytics trades that guesswork for quiet, continuous observation. A camera at
-                the entrance is enough: each frame is cleaned up, every bee is found and
-                followed, and the whole scene is distilled into a single health score with
-                clear next steps.
+                Buzzlytics turns that inspection into a computer-vision workflow. A video or still frame
+                is cleaned, bees are detected and tracked, pollen return is estimated, and close-up crops
+                are checked separately for Varroa.
               </p>
             </div>
             <Link href="/analysis" className="btn-honey mt-9">
@@ -340,10 +385,10 @@ export default function Home() {
           <Reveal delay={0.15}>
             <div className="grid grid-cols-2 gap-5">
               {[
-                { v: '3', l: 'Bee classes', s: 'Bee · Pollen · Varroa', tone: 'text-forest-700' },
-                { v: '0–100', l: 'Health index', s: 'A single clinical score', tone: 'text-honey-600' },
-                { v: '~60', l: 'Frames / sec', s: 'When a GPU is available', tone: 'text-forest-700' },
-                { v: '24/7', l: 'Watching', s: 'No manual inspection', tone: 'text-honey-600' },
+                { v: '3', l: 'Input modes', s: 'Video, image, close-up crop', tone: 'text-forest-700' },
+                { v: '0-100', l: 'Health index', s: 'A compact colony score', tone: 'text-honey-600' },
+                { v: '4+', l: 'CV tasks', s: 'Enhance, detect, track, analyze', tone: 'text-forest-700' },
+                { v: '3', l: 'Model paths', s: 'Bee detector, mite detector, crop classifier', tone: 'text-honey-600' },
               ].map((s) => (
                 <div key={s.l} className="card p-7">
                   <div className={`font-display text-4xl font-semibold tabular ${s.tone}`}>{s.v}</div>
@@ -356,31 +401,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------- CTA ---------- */}
       <section className="relative overflow-hidden px-5 pb-24">
         <Reveal>
           <div className="relative mx-auto max-w-[1240px] overflow-hidden rounded-3xl border border-forest-700 bg-forest-700 px-6 py-20 text-center shadow-lift md:px-8">
             <div className="absolute inset-0 comb-tex opacity-30" aria-hidden="true" />
-            <div className="absolute -left-16 -top-16 h-64 w-64 rounded-full bg-forest-600/60 blur-3xl" />
-            <div className="absolute -bottom-16 -right-10 h-64 w-64 rounded-full bg-honey-500/30 blur-3xl" />
             <div className="relative mx-auto max-w-2xl">
               <h2 className="font-display text-4xl font-medium leading-tight text-cream md:text-5xl">
-                Point a camera at the hive.<br />
-                <span className="italic text-honey-200">Let it do the watching.</span>
+                Bring a clean hive clip.<br />
+                <span className="italic text-honey-200">Leave with visual evidence.</span>
               </h2>
               <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-forest-100">
-                Upload a clip or open a live feed and watch Buzzlytics annotate, track and
-                score your colony in real time.
+                Upload entrance footage, inspect still frames, or run a close-up Varroa crop
+                through the dedicated mite detector.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Link href="/analysis" className="btn-honey">
-                  Analyze a video <ArrowRight className="h-4 w-4" />
+                  Analyze footage <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/analysis"
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-forest-300/40 bg-forest-600/40 px-7 py-3.5 text-sm font-semibold text-cream transition-all hover:bg-forest-600/70"
                 >
-                  <Radio className="h-4 w-4" /> Open live feed
+                  <ScanSearch className="h-4 w-4" /> Inspect a crop
                 </Link>
               </div>
             </div>

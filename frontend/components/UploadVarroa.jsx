@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { ScanSearch, Upload, X } from 'lucide-react';
 import { varroaApi } from '../services/api';
+import ProcessingInsight from './ProcessingInsight';
 
 const ACCEPTED_FORMATS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
@@ -99,6 +100,10 @@ export default function UploadVarroa({
             <div className="mt-1.5 text-sm text-ink-soft">
               Varroa mode expects one cropped bee image
             </div>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-forest-200 bg-forest-50 px-3 py-1 text-xs font-semibold text-forest-700">
+              <span className="h-2 w-2 rounded-full bg-forest-500" />
+              YOLO mite detector active
+            </div>
             <div className="mt-4 text-xs font-medium text-ink-faint">
               Supports {ACCEPTED_FORMATS.join(' / ')}
             </div>
@@ -128,11 +133,21 @@ export default function UploadVarroa({
       </div>
 
       {isUploading && (
-        <div className="mt-6 flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-sand">
-            <div className="h-full w-full animate-pulse rounded-full bg-forest-500 opacity-60" />
+        <div className="mt-6">
+          <div className="flex items-center gap-3">
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-sand">
+              <div className="h-full w-full animate-pulse rounded-full bg-forest-500 opacity-60" />
+            </div>
+            <div className="text-xs font-medium text-ink-soft">Inspecting...</div>
           </div>
-          <div className="text-xs font-medium text-ink-soft">Classifying...</div>
+          <ProcessingInsight
+            messages={[
+              'Loading the close-up crop into the Varroa endpoint.',
+              'Running the YOLO mite detector for tiny red boxes.',
+              'Checking whether the crop needs classifier fallback.',
+              'Drawing mite evidence onto the annotated result.',
+            ]}
+          />
         </div>
       )}
 
@@ -140,7 +155,7 @@ export default function UploadVarroa({
         <div className="mt-6 flex gap-3">
           <button className="btn-primary flex-1" onClick={handleUpload}>
             <Upload size={18} />
-            Classify varroa crop
+            Detect mites
           </button>
           <button className="btn-soft" onClick={handleRemoveFile}>
             Cancel

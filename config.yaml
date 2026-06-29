@@ -60,8 +60,9 @@ motion:
   kernel_size: 3
 
 video:
-  frame_skip: 5
-  max_seconds: 10   # only the first N seconds of an uploaded video are processed (0 = no cap)
+  frame_skip: 5         # fallback when process_fps is 0
+  process_fps: 10       # run detection at 10 frames/sec of video (overrides frame_skip; 0 = use frame_skip)
+  max_seconds: 10       # only the first N seconds of an uploaded video are processed (0 = no cap)
 
 preprocess:
   white_balance: true

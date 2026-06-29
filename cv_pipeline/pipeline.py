@@ -143,6 +143,10 @@ class CVPipeline:
         # frame_skip: process every Nth frame; <=1 means every frame
         vid_cfg = cfg.get("video", {})
         self._frame_skip: int = max(1, int(vid_cfg.get("frame_skip", 1)))
+        # Target inference rate (frames processed per second of video). When
+        # > 0 it overrides frame_skip per-video from the source fps, so the
+        # detector runs ~process_fps times/sec regardless of the clip's fps.
+        self._process_fps: float = float(vid_cfg.get("process_fps", 0) or 0)
         # Cap how much of an uploaded video gets processed (seconds). 0/None
         # means no cap. Keeps CPU processing time bounded on long uploads.
         self._max_seconds: float = float(vid_cfg.get("max_seconds", 10) or 0)
@@ -381,6 +385,14 @@ class CVPipeline:
         if fps <= 0:
             fps = 30.0
 
+        # Effective frame_skip: derive from process_fps so inference runs at a
+        # fixed rate (e.g. 10/sec) regardless of the source fps; else fall back
+        # to the fixed frame_skip.
+        if self._process_fps > 0:
+            frame_skip = max(1, round(fps / self._process_fps))
+        else:
+            frame_skip = self._frame_skip
+
         # Cap processing to the first ``max_seconds`` of footage (0 = no cap).
         max_frames = int(fps * self._max_seconds) if self._max_seconds else 0
         if max_frames and (total_frames <= 0 or max_frames < total_frames):
@@ -420,8 +432,8 @@ class CVPipeline:
                 # (cheap, no inference) instead of repeating the old frame —
                 # otherwise motion freezes for N frames and looks choppy.
                 if (
-                    self._frame_skip > 1
-                    and frame_number % self._frame_skip != 0
+                    frame_skip > 1
+                    and frame_number % frame_skip != 0
                     and last_result is not None
                 ):
                     annotated = self.visualizer.annotate_frame(

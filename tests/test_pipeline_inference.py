@@ -52,5 +52,7 @@ def test_frame_skip_processes_subset(tmp_path):
 
 def _skip_config(skip):
     from cv_pipeline.config import get_default_config
-    c = get_default_config(); c["video"]["frame_skip"] = skip
+    c = get_default_config()
+    c["video"]["frame_skip"] = skip
+    c["video"]["process_fps"] = 0  # test the fixed frame_skip path directly
     return c

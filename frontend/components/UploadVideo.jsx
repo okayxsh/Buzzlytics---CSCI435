@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Upload, FileVideo, X } from 'lucide-react';
 import { videoApi } from '../services/api';
+import ProcessingInsight from './ProcessingInsight';
 
 const ACCEPTED_FORMATS = ['.mp4', '.avi', '.mov', '.webm'];
 const ACCEPTED_MIME_TYPES = ['video/mp4', 'video/avi', 'video/quicktime', 'video/webm', 'video/x-msvideo'];
@@ -171,6 +172,16 @@ export default function UploadVideo({ onUploadStart, onUploadComplete, onUploadE
             Uploading… {progress}%
           </div>
         </div>
+      )}
+
+      {isUploading && (
+        <ProcessingInsight
+          messages={[
+            'Sending the clip to the local FastAPI backend.',
+            'Preparing the video for frame-by-frame analysis.',
+            'Next, YOLO and ByteTrack will read sampled frames.',
+          ]}
+        />
       )}
 
       {/* Actions */}

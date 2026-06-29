@@ -67,14 +67,14 @@ Buzzlytics is a computer-vision hive health prototype that converts uploaded hiv
 
 ## Vision Capabilities
 
-The system integrates the following four computer vision capabilities:
+The app integrates the following four computer vision capabilities:
 
 | # | Capability | Implementation | Module |
 |---|-----------|---------------|--------|
-| 1 | **Image Enhancement** | CLAHE (Contrast Limited Adaptive Histogram Equalization) in LAB color space + Non-Local Means denoising | `cv_pipeline/preprocess.py` |
-| 2 | **Object Detection** | Fine-tuned YOLOv8 with 3 bee classes | `cv_pipeline/detector.py` |
-| 3 | **Object Tracking** | ByteTrack multi-object tracker via ultralytics | `cv_pipeline/tracker.py` |
-| 4 | **Video Processing** | Full video pipeline with frame-by-frame processing, moving object tracking, and health analytics | `cv_pipeline/pipeline.py` |
+| 1 | **Object Detection** | YOLO detects bees and pollen-carrying bees | `cv_pipeline/detector.py` |
+| 2 | **Object Tracking** | Tracker assigns persistent IDs and counts bees over time | `cv_pipeline/tracker.py` |
+| 3 | **Video Processing / Moving Object Detection** | Frame-by-frame video analysis with optional motion mask/background modelling | `cv_pipeline/pipeline.py`, `cv_pipeline/motion.py` |
+| 4 | **Object Recognition / Classification** | Varroa classifier/detector identifies healthy vs infected bee crops | `cv_pipeline/varroa_classifier.py`, `cv_pipeline/varroa_detector.py` |
 
 **Two-stage taxonomy:**
 - Stage 1 — detector (boxes every bee): `bee` (0), `pollen_bee` (1)
@@ -154,10 +154,11 @@ cd ..
 
 ### 4. Model weights (already included)
 
-The trained two-stage models ship with the repo, so it runs out of the box:
+The trained Buzzlytics models ship with the repo, so it runs out of the box:
 
 - `cv_pipeline/weights/best.pt` — stage-1 detector (`bee`, `pollen_bee`)
 - `cv_pipeline/weights/varroa_cls.pt` — stage-2 varroa classifier (`healthy`, `varroa`)
+- `cv_pipeline/weights/varroa_det.pt` — close-up Varroa mite detector (`mite`)
 
 No download or training needed. (To retrain, see [Model Training](#model-training) and drop the new
 weights at those same paths.) If `best.pt` is ever missing, the app falls back to a generic YOLOv8
@@ -273,8 +274,10 @@ The builder produces **two** datasets from two public sources (no API key needed
 
 - **Detection** (stage 1) from **VnPollenBee** ([HUST ComVis](https://comvis-hust.github.io/datasets/pollenbee.html)) —
   LabelMe polygons → `datasets/data/{train,valid,test}`. `nonpollenbee` → `bee`, `pollenbee` → `pollen_bee`.
-- **Varroa classification** (stage 2) from **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) —
+- **Varroa classification** (fallback health check) from **VarroaDataset** ([TU Wien, Zenodo 4085044](https://zenodo.org/records/4085044), CC-BY-4.0) —
   single-bee crops sorted into `datasets/varroa_cls/{train,val,test}/{healthy,varroa}/`.
+- **Varroa mite detection** (close-up crop detector) from VarroaDataset coordinate labels —
+  YOLO mite boxes under `datasets/varroa_det/{train,valid,test}`.
 
 ```bash
 python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
@@ -283,7 +286,8 @@ python datasets/prepare_dataset.py        # downloads ~1.5 GB into datasets/raw/
 The detection config is written to `datasets/data/bee_dataset.yaml`. The end-to-end path is two Colab
 notebooks: run `training/build_dataset_colab.ipynb` once (builds both zips into your Drive), then
 `training/colab_train.ipynb` (trains **both** the detector and the varroa classifier).
-Drop `best.pt` → `cv_pipeline/weights/best.pt` and `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`.
+Drop `best.pt` → `cv_pipeline/weights/best.pt`, `varroa_cls.pt` → `cv_pipeline/weights/varroa_cls.pt`,
+and the close-up mite detector weights → `cv_pipeline/weights/varroa_det.pt`.
 
 ### Label Format (YOLO)
 
@@ -297,7 +301,9 @@ All values are normalized to [0, 1]. Detection class IDs:
 - `0` = bee
 - `1` = pollen_bee
 
-(Varroa is not a detection label — the stage-2 classifier sorts crops into `healthy`/`varroa` folders.)
+Varroa is not a label in the entrance-frame bee detector. Close-up mite detection is handled by
+the separate `varroa_det.pt` model, while the crop classifier remains available as a fallback
+`healthy`/`varroa` health check.
 
 ### Training
 
@@ -342,6 +348,7 @@ When starting the backend, the pipeline will automatically detect and use `custo
 | `GET` | `/api/video/result/{video_id}` | Stream the annotated video |
 | `GET` | `/api/video/results` | List all processed videos |
 | `DELETE` | `/api/video/result/{video_id}` | Delete a processed video |
+| `POST` | `/api/varroa` | Analyze a close-up bee crop with the Varroa classifier or YOLO mite detector |
 
 ### WebSocket Endpoint
 
@@ -385,17 +392,17 @@ Receive (server to client):
 
 **Scenario 1 - Video Upload Analysis:**
 I upload a video of my hive entrance recorded during the morning foraging period. The system processes the video and shows me:
-- An annotated video with bounding boxes around each detected bee, color-coded by health status
-- A count of detected bees, pollen-carrying bees, and entrance-video Varroa flags
+- An annotated video with bounding boxes around each detected bee and pollen-carrying bee
+- A count of detected bees and pollen-carrying bees, plus motion/activity trends
 - A health score of 75/100 with a "Healthy" classification
 - A recommendation noting good foraging activity based on the pollen-carrying ratio
 
 **Scenario 2 - Close-up Varroa Crop Inspection:**
 I upload a close-up crop of a bee. The system processes the crop and:
 - Predicts whether the crop shows Varroa evidence
-- Displays model confidence and class scores
+- Displays detector confidence and any mite boxes found
 - Shows reference mite count when dataset annotations are available
-- Highlights either reference markings or an estimated model-focus region
+- Falls back to crop-level healthy/Varroa classification if detector weights are unavailable
 
 **Value Delivered:**
 - Provides quantitative health data instead of subjective visual assessment

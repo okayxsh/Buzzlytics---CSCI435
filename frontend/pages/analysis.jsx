@@ -23,6 +23,7 @@ import VideoPlayer from '../components/VideoPlayer';
 import StatsPanel from '../components/StatsPanel';
 import HealthSummary from '../components/HealthSummary';
 import ActivityTimeline from '../components/ActivityTimeline';
+import ProcessingInsight from '../components/ProcessingInsight';
 import { videoApi } from '../services/api';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -32,6 +33,29 @@ const TABS = [
   { id: 'video', label: 'Video', icon: Video },
   { id: 'image', label: 'Image', icon: ImageIcon },
   { id: 'varroa', label: 'Varroa', icon: ScanSearch },
+];
+
+const CV_CAPABILITIES = [
+  {
+    title: 'Object detection',
+    text: 'YOLO detects bees and pollen-carrying bees.',
+    icon: ScanSearch,
+  },
+  {
+    title: 'Object tracking',
+    text: 'The tracker assigns IDs and counts bees over time.',
+    icon: Activity,
+  },
+  {
+    title: 'Video processing',
+    text: 'Frame-by-frame analysis includes moving-object and motion signals.',
+    icon: Video,
+  },
+  {
+    title: 'Object recognition',
+    text: 'The Varroa classifier/detector identifies healthy vs infected bee crops.',
+    icon: ShieldAlert,
+  },
 ];
 
 const WORKFLOW_GUIDANCE = {
@@ -206,6 +230,18 @@ export default function Analysis() {
         </div>
 
         {/* ── Input-mode tab bar ───────────────────────────────────────────── */}
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {CV_CAPABILITIES.map(({ title, text, icon: Icon }) => (
+            <div key={title} className="rounded-2xl border border-line bg-cream p-4 shadow-soft">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-forest-50 text-forest-700">
+                <Icon className="h-4 w-4" />
+              </div>
+              <div className="font-display text-base font-semibold text-ink">{title}</div>
+              <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{text}</p>
+            </div>
+          ))}
+        </div>
+
         <div className="mt-10 flex gap-1 rounded-2xl border border-line bg-sand/60 p-1.5 sm:w-fit">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
@@ -323,6 +359,15 @@ export default function Analysis() {
                 <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
                   Detecting and tracking every bee, frame by frame. This usually takes a moment.
                 </p>
+                <ProcessingInsight
+                  messages={[
+                    'Sampling frames so the demo stays responsive.',
+                    'Running YOLO on raw frames for bee and pollen detections.',
+                    'Assigning ByteTrack IDs so repeated bees are not double-counted.',
+                    'Measuring motion activity with the background model.',
+                    'Writing the annotated result video for playback.',
+                  ]}
+                />
               </div>
             )}
 
@@ -460,7 +505,9 @@ export default function Analysis() {
                     <div>
                       <div className="data-label mb-1.5">Analysis method</div>
                       <div className="font-display text-2xl font-semibold capitalize text-ink">
-                        {varroaData.prediction?.method || 'classifier'}
+                        {varroaData.prediction?.method === 'detector'
+                          ? 'YOLO mite detector'
+                          : 'Crop classifier'}
                       </div>
                       {varroaData.prediction?.method === 'detector' && (
                         <div className="mt-1 text-sm text-ink-faint">
@@ -475,17 +522,16 @@ export default function Analysis() {
                         {`${((varroaData.prediction?.confidence || 0) * 100).toFixed(1)}%`}
                       </div>
                     </div>
-                    <div>
-                      <div className="data-label mb-1.5">Reference mite count</div>
-                      <div className="font-display text-3xl font-semibold tabular text-ink">
-                        {varroaData.ground_truth ? varroaData.ground_truth.mite_count : 'N/A'}
+                    {varroaData.ground_truth && (
+                      <div>
+                        <div className="data-label mb-1.5">Dataset reference count</div>
+                        <div className="font-display text-3xl font-semibold tabular text-ink">
+                          {varroaData.ground_truth.mite_count}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <p className="text-sm leading-relaxed text-ink-soft">
-                      This mode is for close-up bee crop inspection. If mite-detector weights are
-                      installed, red boxes are model detections. Otherwise, this view uses the
-                      classifier and may show dataset reference markings or an occlusion-based
-                      model-focus estimate.
+                      This mode is for close-up bee crop inspection. Red boxes are YOLO mite detections from the dedicated Varroa detector; the crop classifier remains available as a fallback health check if detector weights are unavailable.
                     </p>
                   </div>
                 </div>

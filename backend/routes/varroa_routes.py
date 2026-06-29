@@ -1,4 +1,4 @@
-"""Close-up varroa crop classification endpoint."""
+"""Varroa crop detection/classification endpoint."""
 
 from __future__ import annotations
 
@@ -355,3 +355,4 @@ async def process_varroa_crop(file: UploadFile = File(...)) -> Dict[str, Any]:
         "focus_box": focus_box,
         "annotated_image": annotated_b64,
     }
+

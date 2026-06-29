@@ -66,7 +66,7 @@ const SIGNALS = [
     tone: 'text-amberwarn',
     chip: 'bg-honey-50 border-honey-200',
     dot: 'bg-amberwarn',
-    desc: 'Uses a separate close-up classifier for bee crops where mite-sized details are visible.',
+    desc: 'Uses a dedicated close-up detector for mite boxes, with the crop classifier kept as a fallback health check.',
   },
 ];
 
@@ -81,29 +81,29 @@ const PIPELINE = [
   {
     icon: ScanSearch,
     step: '02',
-    name: 'Detect the bees',
+    name: 'Object detection',
     tech: 'Fine-tuned YOLOv8',
     desc: 'Locates bees and pollen-carrying bees in uploaded frames using weights trained for hive imagery.',
   },
   {
     icon: Route,
     step: '03',
-    name: 'Track movement',
-    tech: 'ByteTrack + motion',
-    desc: 'Links detections across video frames and measures how active the entrance is over time.',
+    name: 'Object tracking',
+    tech: 'ByteTrack IDs',
+    desc: 'Assigns persistent IDs and counts bees across the video instead of treating each frame as isolated.',
   },
   {
     icon: LineChart,
     step: '04',
-    name: 'Summarize risk',
-    tech: 'Analytics + crop classifier',
-    desc: 'Combines counts, pollen return, activity, and close-up Varroa inspection into readable results.',
+    name: 'Video + recognition',
+    tech: 'Motion + Varroa model',
+    desc: 'Runs frame-by-frame motion analysis and inspects close-up bee crops with the Varroa detector/classifier path.',
   },
 ];
 
 const FEATURES = [
   { icon: Camera, title: 'Two upload paths', body: 'Analyze entrance videos or still frames without changing tools.' },
-  { icon: Crosshair, title: 'Visible evidence', body: 'Annotated output shows exactly where the model found bees, pollen, and Varroa flags.' },
+  { icon: Crosshair, title: 'Visible evidence', body: 'Annotated output shows bees, pollen labels, and close-up Varroa crop results without mixing the workflows.' },
   { icon: HeartPulse, title: 'Readable scoring', body: 'A 0-100 health score turns raw detections into a compact colony snapshot.' },
   { icon: Activity, title: 'Activity timeline', body: 'Video results include per-frame movement and bee-count trends for the report.' },
   { icon: Cpu, title: 'Local pipeline', body: 'FastAPI, OpenCV, and YOLO run locally with optional GPU acceleration.' },
@@ -300,7 +300,7 @@ export default function Home() {
                 </h2>
               </div>
               <p className="max-w-sm text-ink-soft">
-                Four course-aligned computer-vision stages, connected in one workflow and shown through a working web app.
+                The app demonstrates object detection, tracking, video processing, and Varroa recognition in one workflow.
               </p>
             </div>
           </Reveal>
@@ -388,7 +388,7 @@ export default function Home() {
                 { v: '3', l: 'Input modes', s: 'Video, image, close-up crop', tone: 'text-forest-700' },
                 { v: '0-100', l: 'Health index', s: 'A compact colony score', tone: 'text-honey-600' },
                 { v: '4+', l: 'CV tasks', s: 'Enhance, detect, track, analyze', tone: 'text-forest-700' },
-                { v: '2', l: 'Model stages', s: 'Detector plus crop classifier', tone: 'text-honey-600' },
+                { v: '3', l: 'Model paths', s: 'Bee detector, mite detector, crop classifier', tone: 'text-honey-600' },
               ].map((s) => (
                 <div key={s.l} className="card p-7">
                   <div className={`font-display text-4xl font-semibold tabular ${s.tone}`}>{s.v}</div>
@@ -412,7 +412,7 @@ export default function Home() {
               </h2>
               <p className="mx-auto mt-6 max-w-lg text-lg leading-relaxed text-forest-100">
                 Upload entrance footage, inspect still frames, or run a close-up Varroa crop
-                through the dedicated classifier.
+                through the dedicated mite detector.
               </p>
               <div className="mt-10 flex flex-wrap justify-center gap-3">
                 <Link href="/analysis" className="btn-honey">

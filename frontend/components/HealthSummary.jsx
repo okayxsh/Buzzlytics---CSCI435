@@ -29,13 +29,13 @@ export default function HealthSummary({ data }) {
       recs.push({
         type: 'critical',
         icon: AlertOctagon,
-        text: 'High entrance-video varroa flag rate. Confirm with the close-up Varroa crop workflow.',
+        text: 'High Varroa crop flag rate. Review close-up samples before drawing a hive-level conclusion.',
       });
     } else if (infectionRate > 5) {
       recs.push({
         type: 'warning',
         icon: AlertTriangle,
-        text: 'Moderate entrance-video varroa flags. Use close-up crop inspection before drawing a hive-health conclusion.',
+        text: 'Moderate Varroa crop flags. Confirm with additional close-up crop inspection.',
       });
     }
 
